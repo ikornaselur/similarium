@@ -1,0 +1,5 @@
+*.bin
+.venv
+word2vec.db
+word2vec.db-shm
+word2vec.db-wal
