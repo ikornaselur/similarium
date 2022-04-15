@@ -13,7 +13,7 @@ from rich.progress import MofNCompleteColumn, Progress, TimeElapsedColumn
 DB_NAME = "word2vec.db"
 
 
-def chunked(iterable: Iterable, n: int = 1000) -> Iterator:
+def chunked(iterable: Iterable, n: int = 10_000) -> Iterator:
     def take(n: int, iterable: Iterable) -> list:
         return list(islice(iterable, n))
 
@@ -50,12 +50,12 @@ def main() -> None:
     with console.status("Deleting..."):
         con.execute("DELETE FROM word2vec")
 
-    with Progress(
-        *Progress.get_default_columns(),
-        TimeElapsedColumn(),
-        MofNCompleteColumn(),
-    ) as progress:
-        with con:
+    with con:
+        with Progress(
+            *Progress.get_default_columns(),
+            TimeElapsedColumn(),
+            MofNCompleteColumn(),
+        ) as progress:
             words: list[str]
             for words in chunked(
                 progress.track(
@@ -67,7 +67,7 @@ def main() -> None:
                     "insert into word2vec values(?,?)",
                     ((word, bfloat(model[word])) for word in words),
                 )
-            console.log("Finishing up")
+        console.log("Finishing up")
 
 
 if __name__ == "__main__":

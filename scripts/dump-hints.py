@@ -1,11 +1,13 @@
 import heapq
 import json
 import multiprocessing as mp
-import pickle
 import re
+import sqlite3
 from collections import namedtuple
 from functools import partial
+from itertools import islice
 from pathlib import Path
+from typing import Iterable, Iterator
 
 import gensim.models.keyedvectors as word2vec
 from numpy import dot
@@ -23,16 +25,25 @@ Similarities = list[tuple[float, str]]
 
 PROCESSES = max(mp.cpu_count() // 2, 1)
 CHUNK_SIZE = 100
+DB_NAME = "word2vec.db"
 
 console = Console()
+
+
+def chunked(iterable: Iterable, n: int = 1000) -> Iterator:
+    def take(n: int, iterable: Iterable) -> list:
+        return list(islice(iterable, n))
+
+    return iter(partial(take, n, iter(iterable)), [])
 
 
 def make_words() -> dict[str, Word]:
     console.log("Load vectors into model")
 
-    model: word2vec.KeyedVectors = word2vec.KeyedVectors.load_word2vec_format(
-        VECTORS, binary=True
-    )
+    with console.status("Importing..."):
+        model: word2vec.KeyedVectors = word2vec.KeyedVectors.load_word2vec_format(
+            VECTORS, binary=True
+        )
 
     console.log("Loading english wordlist")
     with open(ENGLISH_WORDS, "r") as english_words_file:
@@ -74,46 +85,89 @@ def find_hints(
     return (target.name, list(sorted(similarities)))
 
 
+def store_hints(nearest: dict[str, Similarities]) -> None:
+    console.log("Creating tables")
+    con = sqlite3.connect(DB_NAME)
+    con.execute("PRAGMA journal_mode=WAL")
+    cur = con.cursor()
+    cur.execute(
+        """create table if not exists nearby
+        (word text, neighbor text, similarity float, percentile integer,
+        PRIMARY KEY (word, neighbor))"""
+    )
+    cur.execute(
+        """create table if not exists similarity_range
+        (word text PRIMARY KEY, top float, top10 float, rest float)"""
+    )
+    con.commit()
+
+    with Progress(
+        *Progress.get_default_columns(),
+        TimeElapsedColumn(),
+        MofNCompleteColumn(),
+    ) as progress:
+        with con:
+            con.execute("DELETE FROM nearby")
+            con.execute("DELETE FROM similarity_range")
+            for secret, neighbors in progress.track(
+                nearest.items(), description="Inserting hints to tables..."
+            ):
+                con.executemany(
+                    (
+                        "insert into nearby (word, neighbor, similarity, percentile) "
+                        "values (?, ?, ?, ?)"
+                    ),
+                    (
+                        (secret, neighbor, "%s" % score, (1 + idx))
+                        for idx, (score, neighbor) in enumerate(neighbors)
+                    ),
+                )
+
+                top = neighbors[-2][0]
+                top10 = neighbors[-11][0]
+                rest = neighbors[0][0]
+                con.execute(
+                    (
+                        "insert into similarity_range (word, top, top10, rest) "
+                        "values (?, ?, ?, ?)"
+                    ),
+                    (secret, "%s" % top, "%s" % top10, "%s" % rest),
+                )
+
+    con.commit()
+
+
 def main() -> None:
     words = make_words()
 
     console.log("Load target words")
-    hints = {}
     with open(TARGET_WORDS, "r") as f:
         target_words = json.load(f)
 
     console.log(f"Initialising multiprocessing pool with {PROCESSES} processes")
     pool = mp.Pool(processes=PROCESSES)
     words_values = list(words.values())
+
+    hints: dict[str, Similarities] = {}
+
     with Progress(
         *Progress.get_default_columns(),
         TimeElapsedColumn(),
         MofNCompleteColumn(),
     ) as progress:
-        mapper = []
         task = progress.add_task(
             description="Finding hints for words...",
             total=len(target_words),
         )
-        for res in pool.imap_unordered(
+        for word, nearest in pool.imap_unordered(
             partial(find_hints, words_values),
             (words[t] for t in target_words),
             chunksize=CHUNK_SIZE,
         ):
-            mapper.append(res)
+            hints[word] = nearest
             progress.advance(task, 1)
 
-    console.log("Writing hints.json")
-    with open("hints.json", "w+") as hints_file:
-        for secret, nearest in mapper:
-            hints_file.write(json.dumps({"word": secret, "neighbors": nearest}))
-            hints_file.write("\n")
-            hints_file.flush()
-            hints[secret] = nearest
-
-    console.log("Writing nearest.pickle")
-    with open(b"nearest.pickle", "wb") as f:
-        pickle.dump(hints, f)
+    store_hints(hints)
 
 
 if __name__ == "__main__":
