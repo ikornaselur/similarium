@@ -1,12 +1,8 @@
-import collections.abc
+import sqlite3
 from functools import partial
 from itertools import islice
 from pathlib import Path
 from typing import Iterable, Iterator
-
-collections.Mapping = collections.abc.Mapping  # type: ignore
-
-import sqlite3
 
 import gensim.models.keyedvectors as word2vec
 import numpy as np
@@ -18,7 +14,9 @@ DB_NAME = "word2vec.db"
 
 
 def chunked(iterable: Iterable, n: int = 1000) -> Iterator:
-    take = lambda n, iterable: list(islice(iterable, n))
+    def take(n: int, iterable: Iterable) -> list:
+        return list(islice(iterable, n))
+
     return iter(partial(take, n, iter(iterable)), [])
 
 
@@ -31,7 +29,7 @@ def bfloat(vec: npt.NDArray[np.float32]) -> bytes:
     return vec[1::2].tobytes()
 
 
-def main():
+def main() -> None:
     console = Console()
 
     vectors = str(Path(__file__).parent.parent / "GoogleNews-vectors-negative300.bin")

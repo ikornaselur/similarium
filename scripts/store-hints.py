@@ -11,11 +11,13 @@ DB_NAME = "word2vec.db"
 
 
 def chunked(iterable: Iterable, n: int = 1000) -> Iterator:
-    take = lambda n, iterable: list(islice(iterable, n))
+    def take(n: int, iterable: Iterable) -> list:
+        return list(islice(iterable, n))
+
     return iter(partial(take, n, iter(iterable)), [])
 
 
-def main():
+def main() -> None:
     console = Console()
 
     console.print("Creating tables")
@@ -23,8 +25,8 @@ def main():
     con.execute("PRAGMA journal_mode=WAL")
     cur = con.cursor()
     cur.execute(
-        """create table if not exists nearby 
-        (word text, neighbor text, similarity float, percentile integer, 
+        """create table if not exists nearby
+        (word text, neighbor text, similarity float, percentile integer,
         PRIMARY KEY (word, neighbor))"""
     )
     cur.execute(
@@ -44,7 +46,10 @@ def main():
             nearest.items(), description="Inserting hints to tables..."
         ):
             con.executemany(
-                "insert into nearby (word, neighbor, similarity, percentile) values (?, ?, ?, ?)",
+                (
+                    "insert into nearby (word, neighbor, similarity, percentile) "
+                    "values (?, ?, ?, ?)"
+                ),
                 (
                     (secret, neighbor, "%s" % score, (1 + idx))
                     for idx, (score, neighbor) in enumerate(neighbors)
@@ -55,11 +60,15 @@ def main():
             top10 = neighbors[-11][0]
             rest = neighbors[0][0]
             con.execute(
-                "insert into similarity_range (word, top, top10, rest) values (?, ?, ?, ?)",
+                (
+                    "insert into similarity_range (word, top, top10, rest) "
+                    "values (?, ?, ?, ?)"
+                ),
                 (secret, "%s" % top, "%s" % top10, "%s" % rest),
             )
 
     con.commit()
+
 
 if __name__ == "__main__":
     main()

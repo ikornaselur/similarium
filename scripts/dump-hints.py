@@ -1,13 +1,9 @@
-import collections.abc
-
-collections.Mapping = collections.abc.Mapping  # type: ignore
-
+import heapq
 import json
 import pickle
 import re
 from collections import namedtuple
 from pathlib import Path
-import heapq
 
 import gensim.models.keyedvectors as word2vec
 from numpy import dot
@@ -64,7 +60,7 @@ def find_hints(words: dict[str, Word], secret: str) -> tuple[str, Similarities]:
     return secret, list(sorted(similarities))
 
 
-def main():
+def main() -> None:
     vectors = str(Path(__file__).parent.parent / "GoogleNews-vectors-negative300.bin")
     console.log("Load vectors into model")
     model: word2vec.KeyedVectors = word2vec.KeyedVectors.load_word2vec_format(
