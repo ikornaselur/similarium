@@ -6,5 +6,8 @@ wordlists:
 dump_vecs:
 	@poetry run python scripts/dump-vecs.py
 
+dump_hints:
+	@poetry run python scripts/dump-hints.py
+
 lint:
 	@poetry run flake8 scripts src
