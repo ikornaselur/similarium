@@ -7,6 +7,7 @@ import pickle
 import re
 from collections import namedtuple
 from pathlib import Path
+import heapq
 
 import gensim.models.keyedvectors as word2vec
 from numpy import dot
@@ -54,14 +55,13 @@ def find_hints(words: dict[str, Word], secret: str) -> tuple[str, Similarities]:
     similarities: Similarities = []
 
     for word in words.values():
-        similarity = dot(word.vec, target_vec) / (word.norm * target_vec_norm)
-        similarities.append((float(similarity), word.name))
+        similarity = float(dot(word.vec, target_vec) / (word.norm * target_vec_norm))
+        if len(similarities) < 1000:
+            heapq.heappush(similarities, (similarity, word.name))
+        elif similarity > similarities[0][0]:
+            heapq.heappushpop(similarities, (similarity, word.name))
 
-    similarities.sort()
-
-    # Closest items are at the end of the list, pick the last 1000
-    nearest = similarities[-1000:]
-    return secret, nearest
+    return secret, list(sorted(similarities))
 
 
 def main():
