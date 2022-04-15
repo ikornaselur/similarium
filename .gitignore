@@ -3,3 +3,5 @@
 word2vec.db
 word2vec.db-shm
 word2vec.db-wal
+hints.json
+nearest.pickle

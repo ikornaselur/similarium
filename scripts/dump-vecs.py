@@ -11,9 +11,8 @@ import sqlite3
 import gensim.models.keyedvectors as word2vec
 import numpy as np
 import numpy.typing as npt
-
-from rich.progress import track
 from rich.console import Console
+from rich.progress import track
 
 DB_NAME = "word2vec.db"
 
@@ -36,20 +35,20 @@ def main():
     console = Console()
 
     vectors = str(Path(__file__).parent.parent / "GoogleNews-vectors-negative300.bin")
-    console.print("Load vectors into model")
+    console.log("Load vectors into model")
     with console.status("Importing..."):
         model: word2vec.KeyedVectors = word2vec.KeyedVectors.load_word2vec_format(
             vectors, binary=True
         )
 
-    console.print("Set up database")
+    console.log("Set up database")
     con = sqlite3.connect(DB_NAME)
     con.execute("PRAGMA journal_mode=WAL")
     cur = con.cursor()
     cur.execute("create table if not exists word2vec (word text PRIMARY KEY, vec blob)")
     con.commit()
 
-    console.print("Delete existing data from database")
+    console.log("Delete existing data from database")
     with console.status("Deleting..."):
         con.execute("DELETE FROM word2vec")
 
