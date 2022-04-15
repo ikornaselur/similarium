@@ -16,3 +16,6 @@ clean:
 
 lint:
 	@poetry run flake8 scripts src
+
+server:
+	@poetry run python -m semantle_slack_bot.app
