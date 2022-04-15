@@ -8,7 +8,7 @@ import gensim.models.keyedvectors as word2vec
 import numpy as np
 import numpy.typing as npt
 from rich.console import Console
-from rich.progress import track
+from rich.progress import MofNCompleteColumn, Progress, TimeElapsedColumn
 
 DB_NAME = "word2vec.db"
 
@@ -50,19 +50,24 @@ def main() -> None:
     with console.status("Deleting..."):
         con.execute("DELETE FROM word2vec")
 
-    with con:
-        words: list[str]
-        for words in chunked(
-            track(
-                model.key_to_index,
-                description="Importing model to database...",
-            )
-        ):
-            con.executemany(
-                "insert into word2vec values(?,?)",
-                ((word, bfloat(model[word])) for word in words),
-            )
-        print("Finishing up")
+    with Progress(
+        *Progress.get_default_columns(),
+        TimeElapsedColumn(),
+        MofNCompleteColumn(),
+    ) as progress:
+        with con:
+            words: list[str]
+            for words in chunked(
+                progress.track(
+                    model.key_to_index,
+                    description="Importing model to database...",
+                )
+            ):
+                con.executemany(
+                    "insert into word2vec values(?,?)",
+                    ((word, bfloat(model[word])) for word in words),
+                )
+            console.log("Finishing up")
 
 
 if __name__ == "__main__":
