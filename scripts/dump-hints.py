@@ -1,5 +1,4 @@
 import heapq
-import json
 import multiprocessing as mp
 import re
 import sqlite3
@@ -15,9 +14,10 @@ from numpy.linalg import norm
 from rich.console import Console
 from rich.progress import MofNCompleteColumn, Progress, TimeElapsedColumn
 
+from semantle_slack_bot.target_words import target_words
+
 ENGLISH_WORDS = Path(__file__).parent / "wordlists/english.txt"
 BAD_WORDS = Path(__file__).parent / "wordlists/bad.txt"
-TARGET_WORDS = Path(__file__).parent.parent / "src/semantle_slack_bot/target_words.json"
 VECTORS = str(Path(__file__).parent.parent / "GoogleNews-vectors-negative300.bin")
 
 Word = namedtuple("Word", ["name", "vec", "norm"])
@@ -139,10 +139,6 @@ def store_hints(nearest: dict[str, Similarities]) -> None:
 
 def main() -> None:
     words = make_words()
-
-    console.log("Load target words")
-    with open(TARGET_WORDS, "r") as f:
-        target_words = json.load(f)
 
     console.log(f"Initialising multiprocessing pool with {PROCESSES} processes")
     pool = mp.Pool(processes=PROCESSES)
