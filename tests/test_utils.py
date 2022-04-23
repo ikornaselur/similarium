@@ -1,6 +1,6 @@
 import pytest
 
-from semantle_slack_bot.utils import get_custom_progress_bar
+from semantle_slack_bot.utils import get_custom_progress_bar, get_secret
 
 
 def test_get_custom_progress_bar_no_progress() -> None:
@@ -63,3 +63,35 @@ def test_get_custom_progress_bar_longer() -> None:
     assert get_custom_progress_bar(91, 128, 8) == ":p8::p8::p8::p8::p8::p5::p0::p0:"
     assert get_custom_progress_bar(127, 128, 8) == ":p8::p8::p8::p8::p8::p8::p8::p7:"
     assert get_custom_progress_bar(128, 128, 8) == ":p8::p8::p8::p8::p8::p8::p8::p8:"
+
+
+def test_get_custom_progress_bar_issue1() -> None:
+    assert get_custom_progress_bar(0, 1000, 6) == ":p0::p0::p0::p0::p0::p0:"
+    assert get_custom_progress_bar(998, 1000, 6) == ":p8::p8::p8::p8::p8::p7:"
+    assert get_custom_progress_bar(1000, 1000, 6) == ":p8::p8::p8::p8::p8::p8:"
+
+
+def test_get_custom_progress_bar_width_is_always_correct() -> None:
+    total = 100
+    for units in range(0, total + 1):
+        for width in range(1, 10):
+            expected_width = width * 4  # Each emoji is 4 characters
+            assert len(get_custom_progress_bar(units, total, width)) == expected_width
+
+
+def test_get_secret_is_consistent_for_input() -> None:
+    secret = get_secret(channel="foo", day=1)
+
+    assert get_secret(channel="foo", day=1) == secret
+
+
+def test_get_secret_is_different_for_different_channels() -> None:
+    secret = get_secret(channel="foo", day=1)
+
+    assert get_secret(channel="bar", day=1) != secret
+
+
+def test_get_secret_is_different_for_different_day() -> None:
+    secret = get_secret(channel="foo", day=1)
+
+    assert secret != get_secret(channel="foo", day=2)

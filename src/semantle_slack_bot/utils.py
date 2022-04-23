@@ -1,7 +1,10 @@
 import math
+import random
 
 from numpy import dot
 from numpy.linalg import norm
+
+from semantle_slack_bot.target_words import target_words
 
 
 def cos_sim(vec1: list[float], vec2: list[float]) -> float:
@@ -59,3 +62,15 @@ def get_custom_progress_bar(amount: int, total: int, width: int) -> str:
     output += P[0] * (width - full_emojis - 1)
 
     return output
+
+
+def get_secret(channel: str, day: int) -> str:
+    """Get the secret of the day for a channel
+
+    The target words are randomised for each channel, with the channel_id as
+    the random seed. The day is then used to get the secret words from that
+    channel specific list.
+    """
+    rng = random.Random(channel)
+    channel_secrets = rng.sample(target_words, len(target_words))
+    return channel_secrets[day]
