@@ -13,17 +13,8 @@ app = AsyncApp(token=os.environ["SLACK_BOT_TOKEN"])
 
 REGEX = re.compile(r"^(?P<guess>[A-Za-z]+)$")
 
-Say = Callable[[str], Awaitable[dict]]
-Guess = tuple[float, Optional[int], int, str, str]
-
 TOP_GUESSES_TO_SHOW = 15
 LATEST_GUESSES_TO_SHOW = 3
-
-DAY = 2
-PROFILE = "https://pbs.twimg.com/profile_images/625633822235693056/lNGUneLX_400x400.jpg"
-
-GUESSES: dict[str, dict[str, list[Guess]]] = {}
-GAMES = {}
 
 
 async def get_thread_blocks(game: db.Game) -> list:
@@ -62,7 +53,7 @@ async def handle_some_action(ack, body, client):
         puzzle_number=db.Game.get_today_puzzle_number(),
     )
 
-    if match := REGEX.match(value):
+    if match := REGEX.match(value.strip()):
         word = match.group("guess").lower()
         user_id = body["user"]["id"]
 
