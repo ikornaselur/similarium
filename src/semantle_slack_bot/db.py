@@ -12,6 +12,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.future import select
 from sqlalchemy.orm import relationship, selectinload
 from sqlalchemy.orm.session import sessionmaker
+from sqlalchemy.sql.expression import update
 from sqlalchemy.sql.schema import Index
 
 from semantle_slack_bot.logging import logger
@@ -22,7 +23,7 @@ Base = declarative_base()
 engine = create_async_engine("sqlite+aiosqlite:///word2vec.db", future=True)
 session = sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)
 
-BASE_DATE = dt.datetime(2022, 4, 23, tzinfo=dt.timezone.utc)
+BASE_DATE = dt.datetime(2022, 4, 20, tzinfo=dt.timezone.utc)
 
 
 class RowNotFound(Exception):
@@ -42,23 +43,26 @@ def _expand_bfloat(vec: bytes, half_length: int = 600) -> bytes:
     return vec
 
 
-def _get_guess_created_time(day: int) -> int:
-    """Get a "created" time for a guess, based on a day
+def _timestamp_ms() -> int:
+    """Return the elapsed milliseconds since the BASE_DATE
 
-    The created time is the time in milliseconds that have passed since the day
-    before `day`.
-
-    `day` is the number of days that have passed since the BASE_DATE, which is
-    when the bot was launched.
-
-    This created time is used just for ordering of guesses, and time elapsed
-    since yesterday UTC is used so that time zones don't matter (in theory?).
+    This is just used to order guesses in chronological order
     """
-    date = BASE_DATE + dt.timedelta(days=day - 1)
     now = dt.datetime.now(dt.timezone.utc)
-    delta = now - date
+    delta = now - BASE_DATE
 
     return int(delta.total_seconds() * 1000)  # Milliseconds
+
+
+def _get_puzzle_date(puzzle_number: int) -> str:
+    """Get the puzzle date based on puzzle number
+
+    Puzzle number #0 will be on the BASE_DATE
+
+    TODO: Deal with time zones
+    """
+    date = BASE_DATE + dt.timedelta(days=puzzle_number)
+    return date.strftime("%A %B %-d")
 
 
 class Game(Base):
@@ -67,23 +71,32 @@ class Game(Base):
     id = sa.Column(sa.Integer, primary_key=True)
     channel_id = sa.Column(sa.Text)
     thread_ts = sa.Column(sa.Text)
-    day = sa.Column(sa.Integer)
+    puzzle_number = sa.Column(sa.Integer)
+    date = sa.Column(sa.Text)
     active = sa.Column(sa.Boolean)
     secret = sa.Column(sa.Text)
-    guesses = relationship("Guess")
+    guesses = relationship("Guess", backref="game")
 
     __table_args__ = (Index("channel_thread_idx", channel_id, thread_ts),)
 
     @classmethod
     async def new(
-        cls, *, channel_id: str, thread_ts: str, day: int, active: bool = True
+        cls,
+        *,
+        channel_id: str,
+        thread_ts: str,
+        puzzle_number: int,
+        active: bool = True,
     ) -> Game:
-        secret = get_secret(channel_id, day)
-        logger.debug(f"Creating new Game: {channel_id=} {thread_ts=} {day=} {secret=}")
+        secret = get_secret(channel_id, puzzle_number)
+        logger.debug(
+            f"Creating new Game: {channel_id=} {thread_ts=} {puzzle_number=} {secret=}"
+        )
         game = cls(
             channel_id=channel_id,
             thread_ts=thread_ts,
-            day=day,
+            puzzle_number=puzzle_number,
+            date=_get_puzzle_date(puzzle_number),
             active=active,
             secret=secret,
         )
@@ -95,13 +108,17 @@ class Game(Base):
         return game
 
     @classmethod
-    async def get_or_create(cls, *, channel_id: str, thread_ts: str, day: int) -> Game:
-        logger.debug(f"Getting or creating Game: {channel_id=} {thread_ts=} {day=}")
+    async def get_or_create(
+        cls, *, channel_id: str, thread_ts: str, puzzle_number: int
+    ) -> Game:
+        logger.debug(
+            f"Getting or creating Game: {channel_id=} {thread_ts=} {puzzle_number=}"
+        )
         async with session() as s:
             stmt = select(cls).where(
                 cls.channel_id == channel_id,
                 cls.thread_ts == thread_ts,
-                cls.day == day,
+                cls.puzzle_number == puzzle_number,
             )
 
             result = await s.execute(stmt)
@@ -110,7 +127,27 @@ class Game(Base):
         if game is not None:
             return game
 
-        return await cls.new(channel_id=channel_id, thread_ts=thread_ts, day=day)
+        return await cls.new(
+            channel_id=channel_id, thread_ts=thread_ts, puzzle_number=puzzle_number
+        )
+
+    @classmethod
+    async def by_id(cls, game_id: int) -> Optional[Game]:
+        async with session() as s:
+            result = await s.execute(
+                select(cls).where(cls.id == game_id).options(selectinload(cls.guesses))
+            )
+            return result.scalars().one_or_none()
+
+    @staticmethod
+    def get_today_puzzle_number() -> int:
+        """Return what puzzle number is today
+
+        Puzzle number is the number of days since BASE_DATE
+
+        TODO: Deal with timezones
+        """
+        return (dt.datetime.now(dt.timezone.utc) - BASE_DATE).days
 
     async def add_guess(self, *, word: str, user_id: str) -> Guess:
         """Add a guess to the game"""
@@ -120,6 +157,14 @@ class Game(Base):
         guess = await Guess.get(word=word, game_id=self.id)
         if guess is not None:
             logger.debug(f"Guess has already been made {guess=}")
+            async with session() as s:
+                async with s.begin():
+                    stmt = (
+                        update(Guess)
+                        .where(Guess.id == guess.id)
+                        .values(updated=_timestamp_ms())
+                    )
+                    await s.execute(stmt)
             return guess
 
         try:
@@ -170,14 +215,17 @@ class Game(Base):
             stmt = (
                 select(Guess)
                 .where(Guess.game_id == self.id)
-                .order_by(Guess.created.desc())
+                .order_by(Guess.updated.desc())
                 .limit(n)
             )
             result = await s.execute(stmt)
             return result.scalars().all()
 
     def __repr__(self) -> str:
-        return f"<Game (id: {self.id}, Day: {self.day})>"
+        return (
+            f"<Game (id={self.id} puzzle_number={self.puzzle_number} "
+            f"channel_id={self.channel_id} secret={self.secret})>"
+        )
 
 
 class Guess(Base):
@@ -188,7 +236,7 @@ class Guess(Base):
 
     # Milliseconds since start of previous day UTC, only used for ordering
     # guesses in a game. Previous day is used to deal with time zones
-    created = sa.Column(sa.Integer)
+    updated = sa.Column(sa.Integer)
 
     user_id = sa.Column(sa.Text)
     word = sa.Column(sa.Text)
@@ -219,7 +267,7 @@ class Guess(Base):
 
                 guess = cls(
                     game_id=game.id,
-                    created=_get_guess_created_time(day=game.day),
+                    updated=_timestamp_ms(),
                     user_id=user_id,
                     word=word,
                     percentile=percentile,
@@ -245,8 +293,10 @@ class Guess(Base):
 
     def __repr__(self) -> str:
         if self.percentile:
-            return f"<Guess ({self.word}: {self.percentile}/1000)>"
-        return f"<Guess ({self.word}: cold)>"
+            percentile_repr = f"{self.percentile}/1000"
+        else:
+            percentile_repr = "cold"
+        return f"<Guess {self.idx}. (id={self.id} {self.word}: {percentile_repr})>"
 
 
 class Nearby(Base):
