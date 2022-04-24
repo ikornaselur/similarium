@@ -1,7 +1,11 @@
+import math
 from typing import Literal, TypedDict
 
 from semantle_slack_bot import db
 from semantle_slack_bot.utils import get_custom_progress_bar
+
+
+SPACE = " "
 
 
 class TextBlock(TypedDict):
@@ -118,18 +122,9 @@ class SlackGame:
         }
 
     def guess_context(self, guess: db.Guess) -> GuessContextBlock:
-        if guess.percentile:
-            closeness = (
-                f"{get_custom_progress_bar(guess.percentile, 1000, width=6)} "
-                f"{guess.percentile:<03}/1000"
-            )
-        else:
-            closeness = f"{get_custom_progress_bar(0, 1000, width=6)} ~~~/1000"
+        closeness = _closeness(guess)
+        guess_info = f"{_idx(guess)}{_similarity(guess)}{_word(guess)}"
 
-        guess_info = (
-            f"{guess.idx:>2}.   _{guess.similarity:<6.02f}_"
-            f"       *{guess.word:<12}*"
-        )
         return {
             "type": "context",
             "elements": (
@@ -142,3 +137,42 @@ class SlackGame:
                 {"type": "mrkdwn", "text": guess_info},
             ),
         }
+
+
+def _closeness(guess: db.Guess) -> str:
+    if guess.percentile:
+        if guess.percentile < 10:
+            percentile = f"{SPACE * 5}{guess.percentile}"
+        elif guess.percentile < 100:
+            percentile = f"{SPACE * 2}{guess.percentile}"
+        else:
+            percentile = f"{guess.percentile}"
+        return (
+            f"{get_custom_progress_bar(guess.percentile, 1000, width=6)} "
+            f"{percentile}/1000"
+        )
+    return f"{get_custom_progress_bar(0, 1000, width=6)}{SPACE * 12}cold"
+
+
+def _idx(guess: db.Guess) -> str:
+    # Magic!
+    # Add 6 spaces for idx < 10, 4 spaces for idx < 100, else 2 spaces
+    postfix = max(2 - int(math.log10(guess.idx)), 1) * (SPACE * 2)
+
+    return f"{guess.idx}.{postfix}"
+
+
+def _similarity(guess: db.Guess) -> str:
+    prefix = ""
+    if guess.similarity >= 0:
+        # Account for negative symbol
+        prefix += SPACE * 2
+    if abs(guess.similarity) < 10:
+        # Account for small number
+        prefix += SPACE * 2
+
+    return f"_{prefix}{guess.similarity:.02f}_       "
+
+
+def _word(guess: db.Guess) -> str:
+    return f"*{guess.word}*"
