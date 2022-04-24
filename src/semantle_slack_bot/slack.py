@@ -130,12 +130,14 @@ class SlackGame:
             f"{guess.idx:>2}.   _{guess.similarity:<6.02f}_"
             f"       *{guess.word:<12}*"
         )
-
-        tmp_profile = "https://pbs.twimg.com/profile_images/625633822235693056/lNGUneLX_400x400.jpg"
         return {
             "type": "context",
             "elements": (
-                {"type": "image", "image_url": tmp_profile, "alt_text": "profile"},
+                {
+                    "type": "image",
+                    "image_url": guess.user.profile_photo,
+                    "alt_text": "profile",
+                },
                 {"type": "mrkdwn", "text": closeness},
                 {"type": "mrkdwn", "text": guess_info},
             ),

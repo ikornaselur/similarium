@@ -65,6 +65,37 @@ def _get_puzzle_date(puzzle_number: int) -> str:
     return date.strftime("%A %B %-d")
 
 
+class User(Base):
+    __tablename__ = "user"
+
+    id = sa.Column(sa.Text, primary_key=True)
+    profile_photo = sa.Column(sa.Text)
+    username = sa.Column(sa.Text)
+
+    @classmethod
+    async def new(cls, *, user_id: str, profile_photo: str, username: str) -> User:
+        user = cls(
+            id=user_id,
+            profile_photo=profile_photo,
+            username=username,
+        )
+
+        async with session() as s:
+            async with s.begin():
+                s.add(user)
+
+        return user
+
+    @classmethod
+    async def by_id(cls, user_id: str) -> Optional[User]:
+        async with session() as s:
+            result = await s.execute(select(cls).where(cls.id == user_id))
+            return result.scalars().one_or_none()
+
+    def __repr__(self) -> str:
+        return f"<User ({self.id}: {self.username})>"
+
+
 class Game(Base):
     __tablename__ = "game"
 
@@ -238,7 +269,8 @@ class Guess(Base):
     # guesses in a game. Previous day is used to deal with time zones
     updated = sa.Column(sa.Integer)
 
-    user_id = sa.Column(sa.Text)
+    user_id = sa.Column(sa.Text, sa.ForeignKey("user.id"))
+    user = relationship("User", lazy="joined")
     word = sa.Column(sa.Text)
     percentile = sa.Column(sa.Integer)
     similarity = sa.Column(sa.Float)

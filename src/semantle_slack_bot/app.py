@@ -65,9 +65,15 @@ async def handle_some_action(ack, body, client):
         user_id = body["user"]["id"]
 
         await game.add_guess(word=word, user_id=user_id)
-
-        user_info = await client.users_info(user=user_id)
-        profile = user_info.data["user"]["profile"]["image_24"]
+        user = await db.User.by_id(user_id)
+        if user is None:
+            user_info = await client.users_info(user=user_id)
+            user_data = user_info.data["user"]
+            await db.User.new(
+                user_id=user_id,
+                profile_photo=user_data["profile"]["image_24"],
+                username=user_data["name"],
+            )
 
         await client.chat_update(
             channel=channel,
