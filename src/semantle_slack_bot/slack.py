@@ -1,9 +1,9 @@
 import math
-from typing import Literal, TypedDict
+from typing import Literal, Optional, TypedDict
 
 from semantle_slack_bot import db
+from semantle_slack_bot.logging import logger
 from semantle_slack_bot.utils import get_custom_progress_bar
-
 
 SPACE = " "
 
@@ -60,6 +60,7 @@ class ProfileBlock(TypedDict):
 
 class GuessContextBlock(TypedDict):
     type: Literal["context"]
+    block_id: str
     elements: tuple[ProfileBlock, MarkdownTextBlock, MarkdownTextBlock]
 
 
@@ -121,12 +122,41 @@ class SlackGame:
             },
         }
 
-    def guess_context(self, guess: db.Guess) -> GuessContextBlock:
+    @property
+    async def won(self) -> Optional[MarkdownSectionBlock]:
+        top_guesses = await self._game.top_guesses(1)
+        if (
+            not len(top_guesses)
+            or (top_guess := top_guesses[0]).word != self._game.secret
+        ):
+            logger.error("Won block was called when secret had not been guessed")
+            return None
+
+        text = "\n".join(
+            [
+                ":tada: *The secret has been found!* :tada:",
+                f"The secret word of the day was: *{self._game.secret}*",
+                f"The winning guess was made by <@{top_guess.user_id}>!",
+            ]
+        )
+
+        return self.markdown_section(text=text)
+
+    def guess_context(self, guess: db.Guess, base_id: str) -> GuessContextBlock:
         closeness = _closeness(guess)
-        guess_info = f"{_idx(guess)}{_similarity(guess)}{_word(guess)}"
+
+        if guess.percentile == 1000:
+            # It's the secret word!
+            # TODO: check guess.word == guess.game.secret? Add guess.is_secret?
+            guess_info = (
+                f"{_idx(guess)}{_similarity(guess)}:tada: {_word(guess)} :tada:"
+            )
+        else:
+            guess_info = f"{_idx(guess)}{_similarity(guess)}{_word(guess)}"
 
         return {
             "type": "context",
+            "block_id": f"guess-{base_id}-{guess.word}",
             "elements": (
                 {
                     "type": "image",
@@ -142,8 +172,10 @@ class SlackGame:
 def _closeness(guess: db.Guess) -> str:
     if guess.percentile:
         if guess.percentile < 10:
-            percentile = f"{SPACE * 5}{guess.percentile}"
+            percentile = f"{SPACE * 7}{guess.percentile}"
         elif guess.percentile < 100:
+            percentile = f"{SPACE * 4}{guess.percentile}"
+        elif guess.percentile < 1000:
             percentile = f"{SPACE * 2}{guess.percentile}"
         else:
             percentile = f"{guess.percentile}"
@@ -151,7 +183,7 @@ def _closeness(guess: db.Guess) -> str:
             f"{get_custom_progress_bar(guess.percentile, 1000, width=6)} "
             f"{percentile}/1000"
         )
-    return f"{get_custom_progress_bar(0, 1000, width=6)}{SPACE * 12}cold"
+    return f"{get_custom_progress_bar(0, 1000, width=6)}{SPACE * 14}cold"
 
 
 def _idx(guess: db.Guess) -> str:

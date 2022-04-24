@@ -184,18 +184,22 @@ class Game(Base):
         """Add a guess to the game"""
         logger.debug(f"Adding guess {word=} to {self=}")
 
+        if word == self.secret:
+            logger.info(f"Secret word has been found: {word=}")
+
+            async with session() as s:
+                async with s.begin():
+                    self.active = False
+                    s.add(self)
+
         # Check if guess exists
         guess = await Guess.get(word=word, game_id=self.id)
         if guess is not None:
             logger.debug(f"Guess has already been made {guess=}")
             async with session() as s:
                 async with s.begin():
-                    stmt = (
-                        update(Guess)
-                        .where(Guess.id == guess.id)
-                        .values(updated=_timestamp_ms())
-                    )
-                    await s.execute(stmt)
+                    guess.updated = _timestamp_ms()  # type: ignore
+                    s.add(guess)
             return guess
 
         try:
