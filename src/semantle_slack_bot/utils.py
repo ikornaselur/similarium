@@ -1,14 +1,21 @@
 import math
 import random
 
-from numpy import dot
-from numpy.linalg import norm
-
 from semantle_slack_bot.target_words import target_words
+
+Vector = list[float]
+
+
+def dot(A: Vector, B: Vector) -> float:
+    return sum(a * b for a, b in zip(A, B))
+
+
+def norm(vec: Vector) -> float:
+    return math.sqrt(dot(vec, vec))
 
 
 def cos_sim(vec1: list[float], vec2: list[float]) -> float:
-    return float(dot(vec1, vec2) / (norm(vec1) * norm(vec2)))
+    return dot(vec1, vec2) / (norm(vec1) * norm(vec2))
 
 
 def get_similarity(vec1: list[float], vec2: list[float]) -> float:

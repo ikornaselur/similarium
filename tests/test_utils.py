@@ -1,6 +1,6 @@
 import pytest
 
-from semantle_slack_bot.utils import get_custom_progress_bar, get_secret
+from semantle_slack_bot.utils import cos_sim, get_custom_progress_bar, get_secret
 
 
 def test_get_custom_progress_bar_no_progress() -> None:
@@ -95,3 +95,8 @@ def test_get_secret_is_different_for_different_day() -> None:
     secret = get_secret(channel="foo", day=1)
 
     assert secret != get_secret(channel="foo", day=2)
+
+
+def test_cos_sim() -> None:
+    assert cos_sim([1, 2], [3, 4]) == pytest.approx(0.9838699100999074)
+    assert cos_sim([3, 4], [1, 2]) == pytest.approx(0.9838699100999074)
