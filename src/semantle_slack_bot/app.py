@@ -94,7 +94,7 @@ async def message(body: Body, client, ack) -> None:
                         "type": "header",
                         "text": {
                             "type": "plain_text",
-                            "text": f"Semantle day {DAY} - April 16th",
+                            "text": f"Semantle day 4 - April 25th",
                             "emoji": True,
                         },
                     },

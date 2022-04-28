@@ -14,10 +14,12 @@ team on a Slack channel.
 The project expects an english word list and a banned word list to work with.
 
 1. `make wordlist`: Download the default wordlists
-2. `make dump_vecs`: Create an SQLite database and store main vectors
-3. `make dump_hints`: Store hints in the database
+2. `make prepare_database`: Create an SQLite database and store main vectors +
+   hints in database
 
-you can also run `make all` to run the three steps above in a row
+you can also run `make all` to run the two steps above in a row
+
+The whole process should take just 5-10 minutes to run.
 
 
 ## Attributions

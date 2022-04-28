@@ -1,13 +1,10 @@
-all: wordlists dump_vecs dump_hints
+all: wordlists prepare_database
 
 wordlists:
 	@cd scripts && ./download-wordlists.sh
 
-dump_vecs:
-	@poetry run python scripts/dump-vecs.py
-
-dump_hints:
-	@poetry run python scripts/dump-hints.py
+prepare_database:
+	@poetry run python scripts/dump.py
 
 clean:
 	rm word2vec.db*
