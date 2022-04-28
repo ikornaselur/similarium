@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Iterable, Iterator
 
 import gensim.models.keyedvectors as word2vec
+import numpy as np
+import numpy.typing as npt
 from numpy import dot
 from numpy.linalg import norm
 from rich.console import Console
@@ -18,7 +20,7 @@ from semantle_slack_bot.target_words import target_words
 
 ENGLISH_WORDS = Path(__file__).parent / "wordlists/english.txt"
 BAD_WORDS = Path(__file__).parent / "wordlists/bad.txt"
-VECTORS = str(Path(__file__).parent.parent / "GoogleNews-vectors-negative300.bin")
+VECTORS_PATH = str(Path(__file__).parent.parent / "GoogleNews-vectors-negative300.bin")
 
 Word = namedtuple("Word", ["name", "vec", "norm"])
 Similarities = list[tuple[float, str]]
@@ -30,21 +32,33 @@ DB_NAME = "word2vec.db"
 console = Console()
 
 
-def chunked(iterable: Iterable, n: int = 1000) -> Iterator:
+def chunked(iterable: Iterable, n: int = 10_000) -> Iterator:
     def take(n: int, iterable: Iterable) -> list:
         return list(islice(iterable, n))
 
     return iter(partial(take, n, iter(iterable)), [])
 
 
-def make_words() -> dict[str, Word]:
-    console.log("Load vectors into model")
+def bfloat(vec: npt.NDArray[np.float32]) -> bytes:
+    """
+    Half of each floating point vector happens to be zero in the Google model.
+    Possibly using truncated float32 = bfloat. Discard to save space.
+    """
+    vec.dtype = np.int16  # type: ignore
+    return vec[1::2].tobytes()
 
+
+def get_vectors() -> word2vec.KeyedVectors:
+    console.log("Load vectors into model")
     with console.status("Importing..."):
-        model: word2vec.KeyedVectors = word2vec.KeyedVectors.load_word2vec_format(
-            VECTORS, binary=True
+        vectors: word2vec.KeyedVectors = word2vec.KeyedVectors.load_word2vec_format(
+            VECTORS_PATH, binary=True
         )
 
+    return vectors
+
+
+def make_words(vectors: word2vec.KeyedVectors) -> dict[str, Word]:
     console.log("Loading english wordlist")
     with open(ENGLISH_WORDS, "r") as english_words_file:
         english_words = {line.strip() for line in english_words_file.readlines()}
@@ -57,9 +71,9 @@ def make_words() -> dict[str, Word]:
 
     simple_word = re.compile("^[a-z]*$")
     words = {}
-    for word in model.key_to_index:
+    for word in vectors.key_to_index:
         if simple_word.match(word) and word in wordlist:
-            vec = model[word]
+            vec = vectors[word]
             words[word] = Word(name=word, vec=vec, norm=norm(vec))
 
     return words
@@ -137,8 +151,40 @@ def store_hints(nearest: dict[str, Similarities]) -> None:
     con.commit()
 
 
-def main() -> None:
-    words = make_words()
+def dump_vecs(vectors: word2vec.KeyedVectors) -> None:
+    console.log("Set up database")
+    con = sqlite3.connect(DB_NAME)
+    con.execute("PRAGMA journal_mode=WAL")
+    cur = con.cursor()
+    cur.execute("create table if not exists word2vec (word text PRIMARY KEY, vec blob)")
+    con.commit()
+
+    console.log("Delete existing data from database")
+    with console.status("Deleting..."):
+        con.execute("DELETE FROM word2vec")
+
+    with con:
+        with Progress(
+            *Progress.get_default_columns(),
+            TimeElapsedColumn(),
+            MofNCompleteColumn(),
+        ) as progress:
+            words: list[str]
+            for words in chunked(
+                progress.track(
+                    vectors.key_to_index,
+                    description="Importing model to database...",
+                )
+            ):
+                con.executemany(
+                    "insert into word2vec values(?,?)",
+                    ((word, bfloat(vectors[word])) for word in words),
+                )
+        console.log("Committing to database")
+
+
+def dump_hints(vectors: word2vec.KeyedVectors) -> None:
+    words = make_words(vectors)
 
     console.log(f"Initialising multiprocessing pool with {PROCESSES} processes")
     pool = mp.Pool(processes=PROCESSES)
@@ -167,4 +213,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    vectors = get_vectors()
+    dump_vecs(vectors)
+    dump_hints(vectors)
