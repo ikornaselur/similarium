@@ -1,12 +1,12 @@
 import os
 import re
-from typing import Awaitable, Callable, Optional
 
 from slack_bolt.adapter.socket_mode.aiohttp import AsyncSocketModeHandler
 from slack_bolt.app.async_app import AsyncApp
 
 from semantle_slack_bot import db
 from semantle_slack_bot.event_types import Body
+from semantle_slack_bot.logging import logger
 from semantle_slack_bot.slack import SlackGame
 
 app = AsyncApp(token=os.environ["SLACK_BOT_TOKEN"])
@@ -33,17 +33,19 @@ async def get_thread_blocks(game: db.Game) -> list:
             slack_game.guess_context(guess, base_id="top")
             for guess in await game.top_guesses(TOP_GUESSES_TO_SHOW)
         ],
-        slack_game.input if game.active else None
+        slack_game.input if game.active else None,
     ]
 
     return [b for b in blocks if b is not None]
 
 
 @app.action("submit-guess")
-async def handle_some_action(ack, body, client):
+async def handle_some_action(ack, body, client, respond):
     await ack()
 
-    value = body["actions"][0]["value"]
+    value = body["state"]["values"]["guess-input"]["submit-guess"]["value"]
+    logger.info(f"{value=}")
+
     message_ts = body["container"]["message_ts"]
     channel = body["container"]["channel_id"]
 
@@ -53,11 +55,14 @@ async def handle_some_action(ack, body, client):
         puzzle_number=db.Game.get_today_puzzle_number(),
     )
 
-    if match := REGEX.match(value.strip()):
+    if value is not None and (match := REGEX.match(value.strip())):
         word = match.group("guess").lower()
         user_id = body["user"]["id"]
 
-        await game.add_guess(word=word, user_id=user_id)
+        try:
+            await game.add_guess(word=word, user_id=user_id)
+        except db.InvalidWord:
+            return
         user = await db.User.by_id(user_id)
         if user is None:
             user_info = await client.users_info(user=user_id)
@@ -68,12 +73,19 @@ async def handle_some_action(ack, body, client):
                 username=user_data["name"],
             )
 
+        await respond(
+            text="Update to todays game",
+            blocks=await get_thread_blocks(game),
+        )
+
+        """
         await client.chat_update(
             channel=channel,
             ts=message_ts,
             text="Update to todays game",
             blocks=await get_thread_blocks(game),
         )
+        """
 
 
 @app.event("message")
@@ -94,7 +106,7 @@ async def message(body: Body, client, ack) -> None:
                         "type": "header",
                         "text": {
                             "type": "plain_text",
-                            "text": f"Semantle day 4 - April 25th",
+                            "text": "Semantle day 4 - April 25th",
                             "emoji": True,
                         },
                     },

@@ -18,21 +18,44 @@ def test_get_custom_progress_bar_no_width() -> None:
         get_custom_progress_bar(0, 100, 0)
 
 
-def test_get_custom_progress_bar_each_emoji() -> None:
+def test_get_custom_progress_bar_base_cases() -> None:
+    assert get_custom_progress_bar(0, 8, 1) == ":p0:"
+    assert get_custom_progress_bar(1, 8, 1) == ":p1:"
+    assert get_custom_progress_bar(2, 8, 1) == ":p2:"
+    assert get_custom_progress_bar(3, 8, 1) == ":p3:"
+    assert get_custom_progress_bar(4, 8, 1) == ":p4:"
+    assert get_custom_progress_bar(5, 8, 1) == ":p5:"
+    assert get_custom_progress_bar(6, 8, 1) == ":p6:"
+    assert get_custom_progress_bar(7, 8, 1) == ":p7:"
+    assert get_custom_progress_bar(8, 8, 1) == ":p8:"
+
+
+def test_get_custom_progress_bar_base_cases_larger_total() -> None:
+    """
+    For a total of 22, with width 1, each section (except the last)
+    should last 3 "units".
+    This means:
+        * 1-7 are represented thrice (3*7)
+        * 8 is represente once (1)
+    for a total of 3*7 + 1 = 22
+    """
+    total = 22
+
     checks = [
-        (":p0:", range(0, 16)),
-        (":p1:", range(16, 32)),
-        (":p2:", range(32, 48)),
-        (":p3:", range(48, 64)),
-        (":p4:", range(64, 80)),
-        (":p5:", range(80, 96)),
-        (":p6:", range(96, 112)),
-        (":p7:", range(112, 128)),
-        (":p8:", range(128, 129)),
+        (":p0:", [0]),
+        (":p1:", [1, 2, 3]),
+        (":p2:", [4, 5, 6]),
+        (":p3:", [7, 8, 9]),
+        (":p4:", [10, 11, 12]),
+        (":p5:", [13, 14, 15]),
+        (":p6:", [16, 17, 18]),
+        (":p7:", [19, 20, 21]),
+        (":p8:", [22]),
     ]
+
     for emoji, _range in checks:
         for i in _range:
-            assert get_custom_progress_bar(i, 128, 1) == emoji, f"{emoji=} {i=}"
+            assert get_custom_progress_bar(i, total, 1) == emoji, f"{emoji=} {i=}"
 
 
 def test_get_custom_progress_bar_over_multiple_emojis() -> None:
@@ -56,13 +79,23 @@ def test_get_custom_progress_bar_over_multiple_emojis() -> None:
 
 
 def test_get_custom_progress_bar_longer() -> None:
-    assert get_custom_progress_bar(7, 128, 8) == ":p3::p0::p0::p0::p0::p0::p0::p0:"
-    assert get_custom_progress_bar(23, 128, 8) == ":p8::p3::p0::p0::p0::p0::p0::p0:"
-    assert get_custom_progress_bar(33, 128, 8) == ":p8::p8::p0::p0::p0::p0::p0::p0:"
-    assert get_custom_progress_bar(85, 128, 8) == ":p8::p8::p8::p8::p8::p2::p0::p0:"
-    assert get_custom_progress_bar(91, 128, 8) == ":p8::p8::p8::p8::p8::p5::p0::p0:"
+    assert get_custom_progress_bar(7, 128, 8) == ":p4::p0::p0::p0::p0::p0::p0::p0:"
+    assert get_custom_progress_bar(23, 128, 8) == ":p8::p4::p0::p0::p0::p0::p0::p0:"
+    assert get_custom_progress_bar(33, 128, 8) == ":p8::p8::p1::p0::p0::p0::p0::p0:"
+    assert get_custom_progress_bar(85, 128, 8) == ":p8::p8::p8::p8::p8::p3::p0::p0:"
+    assert get_custom_progress_bar(91, 128, 8) == ":p8::p8::p8::p8::p8::p6::p0::p0:"
     assert get_custom_progress_bar(127, 128, 8) == ":p8::p8::p8::p8::p8::p8::p8::p7:"
     assert get_custom_progress_bar(128, 128, 8) == ":p8::p8::p8::p8::p8::p8::p8::p8:"
+
+
+def test_get_custom_progress_bar_immediately_shows_progress() -> None:
+    assert get_custom_progress_bar(0, 1000, 4) == ":p0::p0::p0::p0:"
+    assert get_custom_progress_bar(1, 1000, 4) == ":p1::p0::p0::p0:"
+
+
+def test_get_custom_progress_bar_only_shows_complete_if_full() -> None:
+    assert get_custom_progress_bar(999, 1000, 4) == ":p8::p8::p8::p7:"
+    assert get_custom_progress_bar(1000, 1000, 4) == ":p8::p8::p8::p8:"
 
 
 def test_get_custom_progress_bar_issue1() -> None:

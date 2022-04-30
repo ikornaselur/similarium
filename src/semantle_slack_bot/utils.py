@@ -39,6 +39,11 @@ def get_custom_progress_bar(amount: int, total: int, width: int) -> str:
     :p8: is 128/128 pixels
 
     The width is the number of emojis to use to represent the total amount
+
+    The first emoji is only :p0: when amount is 0, no matter the total.
+    When amount is 1, the first emoji will be at least :p1:.
+
+    The last emoji is never :p8:, unless the amount is equal to total.
     """
     if width < 1:
         raise ValueError("Width needs to be at least 1")
@@ -49,23 +54,27 @@ def get_custom_progress_bar(amount: int, total: int, width: int) -> str:
     if amount <= 0:
         return P[0] * width
 
-    # Calculate how many units each emoji will be
-    # We will round down, making the last space potentially slightly longer,
-    # which is fine if we handle the full amount properly
-    emoji_units = total // width
+    # Calculate how many sections there are. Each "width" can have the length
+    # of PARTIAL_EMOJIS, subtracting 1 to account for the final state of amount
+    # == total
+    section_count = (PARTIAL_EMOJIS * width) - 1
 
-    # Calculate how many full emojis we need
-    full_emojis = amount // emoji_units
+    # Calculate how large each section is, which are all values except the last
+    # one, hence subtract 1 from total
+    section_size = (total - 1) / section_count
 
+    # Calculate how many "sections" are filled
+    filled_sections = math.ceil(round(amount / section_size, 8))
+
+    # Calculate how many filled emojis we need first
+    full_emojis = filled_sections // PARTIAL_EMOJIS
+
+    # Calculate how many sections are needed for the partial
+    partial_units = filled_sections % PARTIAL_EMOJIS
+
+    # Put together the bar
     output = P[8] * full_emojis
-
-    # Calculate width of partial emoji
-    partial_units = amount % emoji_units
-    partial_emoji = P[math.floor((partial_units / emoji_units) * PARTIAL_EMOJIS)]
-
-    output += partial_emoji
-
-    # Fill in the empty emojis
+    output += P[partial_units]
     output += P[0] * (width - full_emojis - 1)
 
     return output
@@ -80,4 +89,4 @@ def get_secret(channel: str, day: int) -> str:
     """
     rng = random.Random(channel)
     channel_secrets = rng.sample(target_words, len(target_words))
-    return channel_secrets[day]
+    return channel_secrets[day % len(target_words)]
