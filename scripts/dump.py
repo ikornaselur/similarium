@@ -16,18 +16,20 @@ from numpy.linalg import norm
 from rich.console import Console
 from rich.progress import MofNCompleteColumn, Progress, TimeElapsedColumn
 
+from semantle_slack_bot.config import config
 from semantle_slack_bot.target_words import target_words
 
-ENGLISH_WORDS = Path(__file__).parent / "wordlists/english.txt"
-BAD_WORDS = Path(__file__).parent / "wordlists/bad.txt"
-VECTORS_PATH = str(Path(__file__).parent.parent / "GoogleNews-vectors-negative300.bin")
+ROOT = Path(__file__).parent.parent
+
+ENGLISH_WORDS = ROOT / config.files.english
+BAD_WORDS = ROOT / config.files.bad_words
+VECTORS_PATH = ROOT / config.files.vectors
 
 Word = namedtuple("Word", ["name", "vec", "norm"])
 Similarities = list[tuple[float, str]]
 
 PROCESSES = max(mp.cpu_count() // 2, 1)
 CHUNK_SIZE = 100
-DB_NAME = "word2vec.db"
 
 console = Console()
 
@@ -83,7 +85,7 @@ def find_hints(
     words: list[Word],
     target: Word,
 ) -> tuple[str, Similarities]:
-    """Return hints for the 1,000 closest words"""
+    """Return hints for the top closest words (from config)"""
     target_vec = target.vec
     target_vec_norm = target.norm
 
@@ -91,7 +93,7 @@ def find_hints(
 
     for word in words:
         similarity = float(dot(word.vec, target_vec) / (word.norm * target_vec_norm))
-        if len(similarities) < 1000:
+        if len(similarities) < config.rules.similarity_count:
             heapq.heappush(similarities, (similarity, word.name))
         elif similarity > similarities[0][0]:
             heapq.heappushpop(similarities, (similarity, word.name))
@@ -101,7 +103,7 @@ def find_hints(
 
 def store_hints(nearest: dict[str, Similarities]) -> None:
     console.log("Creating tables")
-    con = sqlite3.connect(DB_NAME)
+    con = sqlite3.connect(config.database.name)
     con.execute("PRAGMA journal_mode=WAL")
     cur = con.cursor()
     cur.execute(
@@ -153,7 +155,7 @@ def store_hints(nearest: dict[str, Similarities]) -> None:
 
 def dump_vecs(vectors: word2vec.KeyedVectors) -> None:
     console.log("Set up database")
-    con = sqlite3.connect(DB_NAME)
+    con = sqlite3.connect(config.database.name)
     con.execute("PRAGMA journal_mode=WAL")
     cur = con.cursor()
     cur.execute("create table if not exists word2vec (word text PRIMARY KEY, vec blob)")

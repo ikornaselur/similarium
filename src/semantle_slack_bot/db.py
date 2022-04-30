@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import datetime as dt
 import struct
-from functools import lru_cache
 from typing import Optional
 
 import sqlalchemy as sa
@@ -12,15 +11,15 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.future import select
 from sqlalchemy.orm import relationship, selectinload
 from sqlalchemy.orm.session import sessionmaker
-from sqlalchemy.sql.expression import update
 from sqlalchemy.sql.schema import Index
 
+from semantle_slack_bot.config import config
 from semantle_slack_bot.logging import logger
 from semantle_slack_bot.utils import get_secret, get_similarity
 
 Base = declarative_base()
 
-engine = create_async_engine("sqlite+aiosqlite:///word2vec.db", future=True)
+engine = create_async_engine(f"sqlite+aiosqlite:///{config.database.name}", future=True)
 session = sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)
 
 BASE_DATE = dt.datetime(2022, 4, 20, tzinfo=dt.timezone.utc)
@@ -210,7 +209,7 @@ class Game(Base):
                 logger.debug(f"Word not recognised: {word=}")
                 raise InvalidWord(f"Word not recognised: {word}")
 
-            logger.debug("Guess was not within 1000")
+            logger.debug(f"Guess was not within {config.rules.similarity_count}")
             secret_vec = await Word2Vec.get(self.secret)
             if secret_vec is None:
                 raise Exception("Secret word not recognised?")
@@ -329,7 +328,7 @@ class Guess(Base):
 
     def __repr__(self) -> str:
         if self.percentile:
-            percentile_repr = f"{self.percentile}/1000"
+            percentile_repr = f"{self.percentile}/{config.rules.similarity_count}"
         else:
             percentile_repr = "cold"
         return f"<Guess {self.idx}. (id={self.id} {self.word}: {percentile_repr})>"
@@ -349,7 +348,6 @@ class Nearby(Base):
     __table_args__ = (sa.PrimaryKeyConstraint(word, neighbor),)
 
     @classmethod
-    @lru_cache(maxsize=50_000)
     async def get(cls, word: str, neighbor: str) -> Nearby:
         """Get Nearby by word and neighbor"""
         async with session() as s:
@@ -371,8 +369,9 @@ class Nearby(Base):
 
     def __repr__(self) -> str:
         return (
-            f"<Nearby ({self.word} -> {self.neighbor}: "
-            f"{self.similarity:.02f} {self.percentile})>"
+            f"<Nearby ({self.word} -> {self.percentile}/"
+            f"{config.rules.similarity_count} "
+            f"{self.neighbor}: {self.similarity:.02f})>"
         )
 
 
@@ -384,11 +383,19 @@ class SimilarityRange(Base):
     top10 = sa.Column(sa.Float)
     rest = sa.Column(sa.Float)
 
+    @classmethod
+    async def get(cls, word: str) -> Optional[SimilarityRange]:
+        async with session() as s:
+            stmt = select(cls).where(cls.word == word)
+            result = await s.execute(stmt)
+            return result.scalars().one_or_none()
+
     def __repr__(self) -> str:
-        return (
-            f"<SimilarityRange ({self.word}: {self.top:0.2f} "
-            f"{self.top10:0.2f} {self.rest:0.2})>"
-        )
+        top = self.top
+        top10 = self.top10
+        rest = self.rest
+
+        return f"<SimilarityRange ({self.word}: {top=:0.2f} {top10=:0.2f} {rest=:0.2})>"
 
 
 class Word2Vec(Base):
@@ -399,7 +406,7 @@ class Word2Vec(Base):
 
     @property
     def expanded_vec(self) -> list[float]:
-        return list(struct.unpack("300f", _expand_bfloat(self.vec)))
+        return list(struct.unpack("300f", _expand_bfloat(self.vec)))  # type: ignore
 
     @classmethod
     async def get(cls, word: str) -> Optional[Word2Vec]:
