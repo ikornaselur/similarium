@@ -9,6 +9,13 @@ team on a Slack channel.
 * `poetry` for dependency management
 * `GoogleNews-vectors-negative300.bin.gz` from [here](https://code.google.com/archive/p/word2vec/). Extract it to the root of the repo
 
+`numpy` and `gensim` are extra dependencies only required to initialise the
+database with the wordlists. To install install them you need to run `poetry
+install -E dump` for the scripts to work. 
+
+If you already have a database that has been populated, these dependencies are
+not required
+
 ### Data processing
 
 The project expects an english word list and a banned word list to work with.
