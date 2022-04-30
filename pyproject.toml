@@ -13,6 +13,8 @@ aiohttp = "^3.8.1"
 SQLAlchemy = "^1.4.35"
 aiosqlite = "^0.17.0"
 rich = "^12.2.0"
+gensim = {version = "^4.1.2", optional = true}
+numpy = {version = "^1.22.3", optional = true}
 
 [tool.poetry.dev-dependencies]
 isort = "^5.10.1"
@@ -30,8 +32,9 @@ pytest-clarity = "^1.0.1"
 rich = "^12.2.0"
 ipython = "^8.2.0"
 sqlalchemy-stubs = "^0.4"
-gensim = "^4.1.2"
-numpy = "^1.22.3"
+
+[tool.poetry.extras]
+dump = ["numpy", "gensim"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
