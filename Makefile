@@ -18,7 +18,7 @@ server:
 	@poetry run python -m semantle_slack_bot.app
 
 test:
-	@poetry run pytest tests
+	@poetry run pytest tests -vvs
 
 shell:
 	@poetry run ipython
