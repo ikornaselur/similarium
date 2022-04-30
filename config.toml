@@ -7,4 +7,4 @@ vectors = "GoogleNews-vectors-negative300.bin"
 name = "semantle.db"
 
 [rules]
-similarity_count = 100
+similarity_count = 1000
