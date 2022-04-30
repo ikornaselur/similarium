@@ -1,0 +1,10 @@
+[files]
+english = "scripts/wordlists/english.txt"
+bad_words = "scripts/wordlists/bad.txt"
+vectors = "GoogleNews-vectors-negative300.bin"
+
+[database]
+name = "semantle.db"
+
+[rules]
+similarity_count = 100
