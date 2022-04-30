@@ -15,6 +15,7 @@ aiosqlite = "^0.17.0"
 rich = "^12.2.0"
 gensim = {version = "^4.1.2", optional = true}
 numpy = {version = "^1.22.3", optional = true}
+toml = "^0.10.2"
 
 [tool.poetry.dev-dependencies]
 isort = "^5.10.1"
