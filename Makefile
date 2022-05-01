@@ -1,9 +1,12 @@
-all: wordlists prepare_database
+all: wordlists create_db_tables prepare_data
 
 wordlists:
 	@cd scripts && ./download-wordlists.sh
 
-prepare_database:
+create_db_tables:
+	@poetry run python scripts/create_db.py
+
+prepare_data:
 	@poetry run python scripts/dump.py
 
 clean:

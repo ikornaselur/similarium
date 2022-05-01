@@ -1,7 +1,7 @@
+import asyncio
 import heapq
 import multiprocessing as mp
 import re
-import sqlite3
 from collections import namedtuple
 from functools import partial
 from itertools import islice
@@ -15,7 +15,9 @@ from numpy import dot
 from numpy.linalg import norm
 from rich.console import Console
 from rich.progress import MofNCompleteColumn, Progress, TimeElapsedColumn
+from sqlalchemy.ext.asyncio.session import AsyncSession
 
+from semantle_slack_bot import db
 from semantle_slack_bot.config import config
 from semantle_slack_bot.target_words import target_words
 
@@ -101,76 +103,54 @@ def find_hints(
     return (target.name, list(sorted(similarities)))
 
 
-def store_hints(nearest: dict[str, Similarities]) -> None:
-    console.log("Creating tables")
-    con = sqlite3.connect(config.database.name)
-    con.execute("PRAGMA journal_mode=WAL")
-    cur = con.cursor()
-    cur.execute(
-        """create table if not exists nearby
-        (word text, neighbor text, similarity float, percentile integer,
-        PRIMARY KEY (word, neighbor))"""
-    )
-    cur.execute(
-        """create table if not exists similarity_range
-        (word text PRIMARY KEY, top float, top10 float, rest float)"""
-    )
-    con.commit()
-
+async def store_hints(nearest: dict[str, Similarities]) -> None:
     with Progress(
         *Progress.get_default_columns(),
         TimeElapsedColumn(),
         MofNCompleteColumn(),
     ) as progress:
-        with con:
-            con.execute("DELETE FROM nearby")
-            con.execute("DELETE FROM similarity_range")
+        s: AsyncSession
+        async with db.session() as s:
+            await s.execute("PRAGMA journal_mode=WAL")
+
             for secret, neighbors in progress.track(
                 nearest.items(), description="Inserting hints to tables..."
             ):
-                con.executemany(
-                    (
-                        "insert into nearby (word, neighbor, similarity, percentile) "
-                        "values (?, ?, ?, ?)"
-                    ),
-                    (
-                        (secret, neighbor, "%s" % score, (1 + idx))
+                await s.execute(
+                    db.Nearby.__table__.insert(),
+                    [
+                        {
+                            "word": secret,
+                            "neighbor": neighbor,
+                            "similarity": score,
+                            "percentile": idx + 1,
+                        }
                         for idx, (score, neighbor) in enumerate(neighbors)
-                    ),
+                    ],
                 )
 
-                top = neighbors[-2][0]
-                top10 = neighbors[-11][0]
-                rest = neighbors[0][0]
-                con.execute(
-                    (
-                        "insert into similarity_range (word, top, top10, rest) "
-                        "values (?, ?, ?, ?)"
-                    ),
-                    (secret, "%s" % top, "%s" % top10, "%s" % rest),
+                await s.execute(
+                    db.SimilarityRange.__table__.insert(),
+                    {
+                        "word": secret,
+                        "top": neighbors[-2][0],
+                        "top10": neighbors[-11][0],
+                        "rest": neighbors[0][0],
+                    },
                 )
+                await s.flush()
+            await s.commit()
 
-    con.commit()
 
-
-def dump_vecs(vectors: word2vec.KeyedVectors) -> None:
-    console.log("Set up database")
-    con = sqlite3.connect(config.database.name)
-    con.execute("PRAGMA journal_mode=WAL")
-    cur = con.cursor()
-    cur.execute("create table if not exists word2vec (word text PRIMARY KEY, vec blob)")
-    con.commit()
-
-    console.log("Delete existing data from database")
-    with console.status("Deleting..."):
-        con.execute("DELETE FROM word2vec")
-
-    with con:
-        with Progress(
-            *Progress.get_default_columns(),
-            TimeElapsedColumn(),
-            MofNCompleteColumn(),
-        ) as progress:
+async def dump_vecs(vectors: word2vec.KeyedVectors) -> None:
+    with Progress(
+        *Progress.get_default_columns(),
+        TimeElapsedColumn(),
+        MofNCompleteColumn(),
+    ) as progress:
+        s: AsyncSession
+        async with db.session() as s:
+            await s.execute("PRAGMA journal_mode=WAL")
             words: list[str]
             for words in chunked(
                 progress.track(
@@ -178,14 +158,15 @@ def dump_vecs(vectors: word2vec.KeyedVectors) -> None:
                     description="Importing model to database...",
                 )
             ):
-                con.executemany(
-                    "insert into word2vec values(?,?)",
-                    ((word, bfloat(vectors[word])) for word in words),
+                await s.execute(
+                    db.Word2Vec.__table__.insert(),
+                    [{"word": word, "vec": bfloat(vectors[word])} for word in words],
                 )
-        console.log("Committing to database")
+                await s.flush()
+            await s.commit()
 
 
-def dump_hints(vectors: word2vec.KeyedVectors) -> None:
+async def dump_hints(vectors: word2vec.KeyedVectors) -> None:
     words = make_words(vectors)
 
     console.log(f"Initialising multiprocessing pool with {PROCESSES} processes")
@@ -211,10 +192,14 @@ def dump_hints(vectors: word2vec.KeyedVectors) -> None:
             hints[word] = nearest
             progress.advance(task, 1)
 
-    store_hints(hints)
+    await store_hints(hints)
+
+
+async def main():
+    vectors = get_vectors()
+    await dump_vecs(vectors)
+    await dump_hints(vectors)
 
 
 if __name__ == "__main__":
-    vectors = get_vectors()
-    dump_vecs(vectors)
-    dump_hints(vectors)
+    asyncio.run(main())
