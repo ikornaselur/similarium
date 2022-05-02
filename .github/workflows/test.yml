@@ -1,4 +1,4 @@
-name: Tests
+name: Lint, type hint and test
 on: pull_request
 
 jobs:
@@ -37,6 +37,11 @@ jobs:
         run: |
           source .venv/bin/activate
           make lint
+
+      - name: Type hint
+        run: |
+          source .venv/bin/activate
+          make pyright
 
       - name: Run tests
         run: |
