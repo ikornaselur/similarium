@@ -3,7 +3,7 @@ from semantle_slack_bot import db
 
 
 async def insert_data():
-    async with db.session() as s:
+    async with db.async_session() as s:
         await s.execute("PRAGMA journal_mode=MEMORY")
         await s.execute(
             db.Word2Vec.__table__.insert(),

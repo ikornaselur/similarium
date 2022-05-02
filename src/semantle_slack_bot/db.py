@@ -20,7 +20,7 @@ from semantle_slack_bot.utils import get_secret, get_similarity
 Base = declarative_base()
 
 engine = create_async_engine(f"sqlite+aiosqlite:///{config.database.name}", future=True)
-session = sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)
+async_session = sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)
 
 BASE_DATE = dt.datetime(2022, 4, 20, tzinfo=dt.timezone.utc)
 
@@ -72,24 +72,9 @@ class User(Base):
     username = sa.Column(sa.Text)
 
     @classmethod
-    async def new(cls, *, user_id: str, profile_photo: str, username: str) -> User:
-        user = cls(
-            id=user_id,
-            profile_photo=profile_photo,
-            username=username,
-        )
-
-        async with session() as s:
-            async with s.begin():
-                s.add(user)
-
-        return user
-
-    @classmethod
-    async def by_id(cls, user_id: str) -> Optional[User]:
-        async with session() as s:
-            result = await s.execute(select(cls).where(cls.id == user_id))
-            return result.scalars().one_or_none()
+    async def by_id(cls, *, session: AsyncSession, user_id: str) -> Optional[User]:
+        result = await session.execute(select(cls).where(cls.id == user_id))
+        return result.scalars().one_or_none()
 
     def __repr__(self) -> str:
         return f"<User ({self.id}: {self.username})>"
@@ -105,12 +90,12 @@ class Game(Base):
     date = sa.Column(sa.Text)
     active = sa.Column(sa.Boolean)
     secret = sa.Column(sa.Text)
-    guesses = relationship("Guess", backref="game")
+    guesses = relationship("Guess", backref="game", lazy="joined")
 
     __table_args__ = (Index("channel_thread_idx", channel_id, thread_ts),)
 
     @classmethod
-    async def new(
+    def new(
         cls,
         *,
         channel_id: str,
@@ -122,7 +107,7 @@ class Game(Base):
         logger.debug(
             f"Creating new Game: {channel_id=} {thread_ts=} {puzzle_number=} {secret=}"
         )
-        game = cls(
+        return cls(
             channel_id=channel_id,
             thread_ts=thread_ts,
             puzzle_number=puzzle_number,
@@ -131,43 +116,38 @@ class Game(Base):
             secret=secret,
         )
 
-        async with session() as s:
-            async with s.begin():
-                s.add(game)
-
-        return game
-
     @classmethod
-    async def get_or_create(
-        cls, *, channel_id: str, thread_ts: str, puzzle_number: int
-    ) -> Game:
+    async def get(
+        cls,
+        *,
+        session: AsyncSession,
+        channel_id: str,
+        thread_ts: str,
+        puzzle_number: int,
+    ) -> Optional[Game]:
         logger.debug(
             f"Getting or creating Game: {channel_id=} {thread_ts=} {puzzle_number=}"
         )
-        async with session() as s:
-            stmt = select(cls).where(
+        stmt = (
+            select(cls)
+            .where(
                 cls.channel_id == channel_id,
                 cls.thread_ts == thread_ts,
                 cls.puzzle_number == puzzle_number,
             )
-
-            result = await s.execute(stmt)
-
-        game: Optional[Game] = result.scalars().one_or_none()
-        if game is not None:
-            return game
-
-        return await cls.new(
-            channel_id=channel_id, thread_ts=thread_ts, puzzle_number=puzzle_number
+            .options(selectinload(cls.guesses))
         )
 
+        result = await session.execute(stmt)
+
+        return result.scalars().one_or_none()
+
     @classmethod
-    async def by_id(cls, game_id: int) -> Optional[Game]:
-        async with session() as s:
-            result = await s.execute(
-                select(cls).where(cls.id == game_id).options(selectinload(cls.guesses))
-            )
-            return result.scalars().one_or_none()
+    async def by_id(cls, *, session: AsyncSession, game_id: int) -> Optional[Game]:
+        result = await session.execute(
+            select(cls).where(cls.id == game_id).options(selectinload(cls.guesses))
+        )
+        return result.scalars().one_or_none()
 
     @staticmethod
     def get_today_puzzle_number() -> int:
@@ -179,38 +159,33 @@ class Game(Base):
         """
         return (dt.datetime.now(dt.timezone.utc) - BASE_DATE).days
 
-    async def add_guess(self, *, word: str, user_id: str) -> Guess:
+    async def add_guess(
+        self, *, session: AsyncSession, word: str, user_id: str
+    ) -> Guess:
         """Add a guess to the game"""
         logger.debug(f"Adding guess {word=} to {self=}")
 
         if word == self.secret:
             logger.info(f"Secret word has been found: {word=}")
-
-            async with session() as s:
-                async with s.begin():
-                    self.active = False
-                    s.add(self)
+            self.active = False
 
         # Check if guess exists
-        guess = await Guess.get(word=word, game_id=self.id)
+        guess = await Guess.get(session=session, word=word, game_id=self.id)
         if guess is not None:
             logger.debug(f"Guess has already been made {guess=}")
-            async with session() as s:
-                async with s.begin():
-                    guess.updated = _timestamp_ms()  # type: ignore
-                    s.add(guess)
+            guess.updated = _timestamp_ms()  # type: ignore
             return guess
 
         try:
-            nearby = await Nearby.get(word=self.secret, neighbor=word)
+            nearby = await Nearby.get(session=session, word=self.secret, neighbor=word)
         except RowNotFound:
-            guess_vec = await Word2Vec.get(word)
+            guess_vec = await Word2Vec.get(session=session, word=word)
             if guess_vec is None:
                 logger.debug(f"Word not recognised: {word=}")
                 raise InvalidWord(f"Word not recognised: {word}")
 
             logger.debug(f"Guess was not within {config.rules.similarity_count}")
-            secret_vec = await Word2Vec.get(self.secret)
+            secret_vec = await Word2Vec.get(session=session, word=self.secret)
             if secret_vec is None:
                 raise Exception("Secret word not recognised?")
 
@@ -224,36 +199,36 @@ class Game(Base):
 
         # Create a new guess
         guess = await Guess.new(
+            session=session,
             game=self,
             user_id=user_id,
             word=word,
             percentile=percentile,
             similarity=similarity,
         )
+        session.add(guess)
+        await session.commit()
+        await session.refresh(self)
 
-        return guess
+    async def top_guesses(self, *, session: AsyncSession, n: int) -> list[Guess]:
+        stmt = (
+            select(Guess)
+            .where(Guess.game_id == self.id)
+            .order_by(Guess.similarity.desc())
+            .limit(n)
+        )
+        result = await session.execute(stmt)
+        return result.scalars().all()
 
-    async def top_guesses(self, n: int) -> list[Guess]:
-        async with session() as s:
-            stmt = (
-                select(Guess)
-                .where(Guess.game_id == self.id)
-                .order_by(Guess.similarity.desc())
-                .limit(n)
-            )
-            result = await s.execute(stmt)
-            return result.scalars().all()
-
-    async def latest_guesses(self, n: int) -> list[Guess]:
-        async with session() as s:
-            stmt = (
-                select(Guess)
-                .where(Guess.game_id == self.id)
-                .order_by(Guess.updated.desc())
-                .limit(n)
-            )
-            result = await s.execute(stmt)
-            return result.scalars().all()
+    async def latest_guesses(self, *, session: AsyncSession, n: int) -> list[Guess]:
+        stmt = (
+            select(Guess)
+            .where(Guess.game_id == self.id)
+            .order_by(Guess.updated.desc())
+            .limit(n)
+        )
+        result = await session.execute(stmt)
+        return result.scalars().all()
 
     def __repr__(self) -> str:
         return (
@@ -283,6 +258,7 @@ class Guess(Base):
     async def new(
         cls,
         *,
+        session: AsyncSession,
         game: Game,
         user_id: str,
         word: str,
@@ -294,35 +270,31 @@ class Guess(Base):
             f"{word=} {percentile=} {similarity=}"
         )
 
-        async with session() as s:
-            async with s.begin():
-                stmt = select(sa.func.count(word)).where(cls.game_id == game.id)
-                result = await s.execute(stmt)
-                count = result.scalars().one()
+        stmt = select(sa.func.count(word)).where(cls.game_id == game.id)
+        result = await session.execute(stmt)
+        count = result.scalars().one()
 
-                guess = cls(
-                    game_id=game.id,
-                    updated=_timestamp_ms(),
-                    user_id=user_id,
-                    word=word,
-                    percentile=percentile,
-                    similarity=similarity,
-                    idx=count + 1,
-                )
-                s.add(guess)
-
-        return guess
+        return cls(
+            game_id=game.id,
+            updated=_timestamp_ms(),
+            user_id=user_id,
+            word=word,
+            percentile=percentile,
+            similarity=similarity,
+            idx=count + 1,
+        )
 
     @classmethod
-    async def get(cls, *, word: str, game_id: int) -> Optional[Guess]:
+    async def get(
+        cls, *, session: AsyncSession, word: str, game_id: int
+    ) -> Optional[Guess]:
         logger.debug(f"Getting guess {word=} {game_id=}")
-        async with session() as s:
-            stmt = select(cls).where(
-                cls.word == word,
-                cls.game_id == game_id,
-            )
+        stmt = select(cls).where(
+            cls.word == word,
+            cls.game_id == game_id,
+        )
 
-            result = await s.execute(stmt)
+        result = await session.execute(stmt)
 
         return result.scalars().one_or_none()
 
@@ -348,19 +320,18 @@ class Nearby(Base):
     __table_args__ = (sa.PrimaryKeyConstraint(word, neighbor),)
 
     @classmethod
-    async def get(cls, word: str, neighbor: str) -> Nearby:
+    async def get(cls, *, session: AsyncSession, word: str, neighbor: str) -> Nearby:
         """Get Nearby by word and neighbor"""
-        async with session() as s:
-            stmt = (
-                select(cls)
-                .where(cls.word == word, cls.neighbor == neighbor)
-                .options(
-                    selectinload(cls.word_vec),
-                    selectinload(cls.neighbor_vec),
-                )
+        stmt = (
+            select(cls)
+            .where(cls.word == word, cls.neighbor == neighbor)
+            .options(
+                selectinload(cls.word_vec),
+                selectinload(cls.neighbor_vec),
             )
-            result = await s.execute(stmt)
-            nearby = result.scalars().one_or_none()
+        )
+        result = await session.execute(stmt)
+        nearby = result.scalars().one_or_none()
 
         if nearby is None:
             raise RowNotFound(f"Nearby not found for {neighbor=} {word=}")
@@ -384,11 +355,12 @@ class SimilarityRange(Base):
     rest = sa.Column(sa.Float)
 
     @classmethod
-    async def get(cls, word: str) -> Optional[SimilarityRange]:
-        async with session() as s:
-            stmt = select(cls).where(cls.word == word)
-            result = await s.execute(stmt)
-            return result.scalars().one_or_none()
+    async def get(
+        cls, *, session: AsyncSession, word: str
+    ) -> Optional[SimilarityRange]:
+        stmt = select(cls).where(cls.word == word)
+        result = await session.execute(stmt)
+        return result.scalars().one_or_none()
 
     def __repr__(self) -> str:
         top = self.top
@@ -409,11 +381,10 @@ class Word2Vec(Base):
         return list(struct.unpack("300f", _expand_bfloat(self.vec)))  # type: ignore
 
     @classmethod
-    async def get(cls, word: str) -> Optional[Word2Vec]:
-        async with session() as s:
-            stmt = select(cls).where(cls.word == word)
-            result = await s.execute(stmt)
-            return result.scalars().one_or_none()
+    async def get(cls, *, session: AsyncSession, word: str) -> Optional[Word2Vec]:
+        stmt = select(cls).where(cls.word == word)
+        result = await session.execute(stmt)
+        return result.scalars().one_or_none()
 
     def __repr__(self) -> str:
         return f"<Word2Vec ({self.word})>"
