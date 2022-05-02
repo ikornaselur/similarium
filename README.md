@@ -29,6 +29,32 @@ you can also run `make all` to run the two steps above in a row
 
 The whole process should take just 5-10 minutes to run.
 
+### Testing
+
+The tests have access to a pre-populated sqlite database with a handful of
+words. To populate the database, three secret words were picked:
+
+  * apple
+  * excited
+  * future
+
+For each secret, few neighboring words were picked, based on their percentile:
+
+  * 990 - 999
+  * 500
+  * 100
+  * 10
+  * 1
+
+The following words are in the test database:
+
+  anticipation, anyone, apple, apples, berry, blueberry, caramel,
+  circumstanced, continue, current, delighted, ecstatic, effused, elated,
+  enthused, excited, exciting, forewarning, forthcoming, fruit, future, grape,
+  happy, kind, marveled, next, nutshells, peach, pear, pears, pleased, potato,
+  potential, prospects, proud, psyched, seedpods, someday, strawberry,
+  thrilled, uncertain, upcoming, vagaries, varieties, viability,
+
 
 ## Attributions
 Based heavily on the
