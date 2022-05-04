@@ -34,7 +34,7 @@ name = "aiosqlite"
 version = "0.17.0"
 description = "asyncio bridge to the standard sqlite3 module"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.6"
 
 [package.dependencies]
@@ -75,7 +75,7 @@ name = "asyncpg"
 version = "0.25.0"
 description = "An asyncio PostgreSQL driver"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.6.0"
 
 [package.extras]
@@ -665,7 +665,7 @@ python-versions = "*"
 
 [[package]]
 name = "pyright"
-version = "1.1.242"
+version = "1.1.244"
 description = "Command line wrapper for pyright"
 category = "dev"
 optional = false
@@ -780,7 +780,7 @@ testing_without_asyncio = ["pytest (>=6.2.5,<7)", "pytest-cov (>=3,<4)", "Flask-
 
 [[package]]
 name = "slack-sdk"
-version = "3.15.2"
+version = "3.16.0"
 description = "The Slack API Platform SDK for Python"
 category = "main"
 optional = false
@@ -788,7 +788,7 @@ python-versions = ">=3.6.0"
 
 [package.extras]
 optional = ["aiodns (>1.0)", "aiohttp (>=3.7.3,<4)", "boto3 (<=2)", "SQLAlchemy (>=1,<2)", "websockets (>=10,<11)", "websocket-client (>=1,<2)"]
-testing = ["pytest (>=6.2.5,<7)", "pytest-asyncio (<1)", "Flask-Sockets (>=0.2,<1)", "Flask (>=1,<2)", "Werkzeug (<2)", "itsdangerous (==2.0.1)", "pytest-cov (>=2,<3)", "codecov (>=2,<3)", "flake8 (>=4,<5)", "black (==22.1.0)", "psutil (>=5,<6)", "databases (>=0.5)", "boto3 (<=2)", "moto (>=3,<4)"]
+testing = ["pytest (>=6.2.5,<7)", "pytest-asyncio (<1)", "Flask-Sockets (>=0.2,<1)", "Flask (>=1,<2)", "Werkzeug (<2)", "itsdangerous (==2.0.1)", "Jinja2 (==3.0.3)", "pytest-cov (>=2,<3)", "codecov (>=2,<3)", "flake8 (>=4,<5)", "black (==22.3.0)", "click (==8.0.4)", "psutil (>=5,<6)", "databases (>=0.5)", "boto3 (<=2)", "moto (>=3,<4)"]
 
 [[package]]
 name = "smart-open"
@@ -945,11 +945,13 @@ multidict = ">=4.0"
 
 [extras]
 dump = ["numpy", "gensim"]
+postgres = ["asyncpg"]
+sqlite = ["aiosqlite"]
 
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "856fa3b003bdef383bf4b222d35788fc6cdd530b0a4154bc803e58bf622eebad"
+content-hash = "f23ab2fcc9ba191f9a1d8ec85727cb763a41d37ae75b2cb994fa89c57434b893"
 
 [metadata.files]
 aiohttp = [
@@ -1519,8 +1521,8 @@ pyrepl = [
     {file = "pyrepl-0.9.0.tar.gz", hash = "sha256:292570f34b5502e871bbb966d639474f2b57fbfcd3373c2d6a2f3d56e681a775"},
 ]
 pyright = [
-    {file = "pyright-1.1.242-py3-none-any.whl", hash = "sha256:5a13e69c6763fd9c61107114cdd4b4bc81605b1fc8c0f250d6a0eefbdc39e6f0"},
-    {file = "pyright-1.1.242.tar.gz", hash = "sha256:db95c4f95e31ccdb0433b65435ab27dd2395eed00de686c58ebf5e20843bdbb0"},
+    {file = "pyright-1.1.244-py3-none-any.whl", hash = "sha256:b12c186320b932d15b6e6f85b08077ca688c6ae572d8a6fef58ba3c0f9eca1d4"},
+    {file = "pyright-1.1.244.tar.gz", hash = "sha256:24aca93b33a72345cffcfcecd303b77bf53f08a54235f9949f51df7d4287fd57"},
 ]
 pytest = [
     {file = "pytest-7.1.2-py3-none-any.whl", hash = "sha256:13d0e3ccfc2b6e26be000cb6568c832ba67ba32e719443bfe725814d3c42433c"},
@@ -1568,8 +1570,8 @@ slack-bolt = [
     {file = "slack_bolt-1.13.1.tar.gz", hash = "sha256:979f113bd53b1868a6b71da7751b83cb2cbc8f2edeb7fe2a6c8e6f61cf97b55e"},
 ]
 slack-sdk = [
-    {file = "slack_sdk-3.15.2-py2.py3-none-any.whl", hash = "sha256:e1fa26786169176e707676decc287fd9d3d547bbc43c0a1a4f99eb373b07da94"},
-    {file = "slack_sdk-3.15.2.tar.gz", hash = "sha256:128f3bb0b5b91454a3d5f140a61f3db370a0e1b50ffe0a8d9e9ebe0e894faed7"},
+    {file = "slack_sdk-3.16.0-py2.py3-none-any.whl", hash = "sha256:dfa3d79539f25c5736a9026a68cf429d73bc697e1210de3b74e4bacaf7ffd5cc"},
+    {file = "slack_sdk-3.16.0.tar.gz", hash = "sha256:ad7b7cca57c7da40dd9db680ebd3ca6833e9e2777b90ada8767c661d79582cf0"},
 ]
 smart-open = [
     {file = "smart_open-6.0.0-py3-none-any.whl", hash = "sha256:94afbd5058a45d4fdc4f859ed158b46054cb5ca1c019d76f6f8a60495f662129"},
