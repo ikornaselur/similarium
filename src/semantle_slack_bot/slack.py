@@ -1,6 +1,8 @@
 import math
 from typing import Literal, Optional, TypedDict
 
+from sqlalchemy.ext.asyncio.session import AsyncSession
+
 from semantle_slack_bot import db
 from semantle_slack_bot.logging import logger
 from semantle_slack_bot.utils import get_custom_progress_bar
@@ -122,9 +124,8 @@ class SlackGame:
             },
         }
 
-    @property
-    async def won(self) -> Optional[MarkdownSectionBlock]:
-        top_guesses = await self._game.top_guesses(1)
+    async def won(self, *, session: AsyncSession) -> Optional[MarkdownSectionBlock]:
+        top_guesses = await self._game.top_guesses(1, session=session)
         if (
             not len(top_guesses)
             or (top_guess := top_guesses[0]).word != self._game.secret
@@ -189,6 +190,7 @@ def _closeness(guess: db.Guess) -> str:
 def _idx(guess: db.Guess) -> str:
     # Magic!
     # Add 6 spaces for idx < 10, 4 spaces for idx < 100, else 2 spaces
+    # TODO: over 100 seems to not work
     postfix = max(2 - int(math.log10(guess.idx)), 1) * (SPACE * 2)
 
     return f"{guess.idx}.{postfix}"

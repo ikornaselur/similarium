@@ -22,7 +22,7 @@ class Files:
 
 @dc.dataclass
 class Database:
-    name: str
+    uri: str
 
 
 @dc.dataclass

@@ -14,7 +14,7 @@ from semantle_slack_bot.config import config as _config
 
 # Overwride the database name to be in-memory for tests, before anything else
 # is imported
-_config.database.name = ":memory:"
+_config.database.uri = "sqlite+aiosqlite:///:memory:"
 from semantle_slack_bot import db as _db
 from tests.init_db import insert_data
 

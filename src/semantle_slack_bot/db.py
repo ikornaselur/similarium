@@ -72,7 +72,7 @@ class User(Base):
     username = sa.Column(sa.Text)
 
     @classmethod
-    async def by_id(cls, *, session: AsyncSession, user_id: str) -> Optional[User]:
+    async def by_id(cls, user_id: str, /, *, session: AsyncSession) -> Optional[User]:
         result = await session.execute(select(cls).where(cls.id == user_id))
         return result.scalars().one_or_none()
 
@@ -120,10 +120,10 @@ class Game(Base):
     async def get(
         cls,
         *,
-        session: AsyncSession,
         channel_id: str,
         thread_ts: str,
         puzzle_number: int,
+        session: AsyncSession,
     ) -> Optional[Game]:
         logger.debug(
             f"Getting or creating Game: {channel_id=} {thread_ts=} {puzzle_number=}"
@@ -143,7 +143,7 @@ class Game(Base):
         return result.scalars().one_or_none()
 
     @classmethod
-    async def by_id(cls, *, session: AsyncSession, game_id: int) -> Optional[Game]:
+    async def by_id(cls, game_id: int, /, *, session: AsyncSession) -> Optional[Game]:
         result = await session.execute(
             select(cls).where(cls.id == game_id).options(selectinload(cls.guesses))
         )
@@ -160,7 +160,7 @@ class Game(Base):
         return (dt.datetime.now(dt.timezone.utc) - BASE_DATE).days
 
     async def add_guess(
-        self, *, session: AsyncSession, word: str, user_id: str
+        self, *, word: str, user_id: str, session: AsyncSession
     ) -> Guess:
         """Add a guess to the game"""
         logger.debug(f"Adding guess {word=} to {self=}")
@@ -210,7 +210,9 @@ class Game(Base):
         await session.commit()
         await session.refresh(self)
 
-    async def top_guesses(self, *, session: AsyncSession, n: int) -> list[Guess]:
+        return guess
+
+    async def top_guesses(self, n: int, /, *, session: AsyncSession) -> list[Guess]:
         stmt = (
             select(Guess)
             .where(Guess.game_id == self.id)
@@ -220,7 +222,7 @@ class Game(Base):
         result = await session.execute(stmt)
         return result.scalars().all()
 
-    async def latest_guesses(self, *, session: AsyncSession, n: int) -> list[Guess]:
+    async def latest_guesses(self, n: int, /, *, session: AsyncSession) -> list[Guess]:
         stmt = (
             select(Guess)
             .where(Guess.game_id == self.id)
@@ -258,18 +260,19 @@ class Guess(Base):
     async def new(
         cls,
         *,
-        session: AsyncSession,
         game: Game,
         user_id: str,
         word: str,
         percentile: int,
         similarity: float,
+        session: AsyncSession,
     ) -> Guess:
         logger.debug(
             f"Creating new Guess: {game=} {user_id=} "
             f"{word=} {percentile=} {similarity=}"
         )
 
+        # XXX: Race condition??
         stmt = select(sa.func.count(word)).where(cls.game_id == game.id)
         result = await session.execute(stmt)
         count = result.scalars().one()
