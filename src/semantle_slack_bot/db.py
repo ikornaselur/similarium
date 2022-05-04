@@ -19,7 +19,7 @@ from semantle_slack_bot.utils import get_secret, get_similarity
 
 Base = declarative_base()
 
-engine = create_async_engine(f"sqlite+aiosqlite:///{config.database.name}", future=True)
+engine = create_async_engine(config.database.uri, future=True)
 async_session = sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)
 
 BASE_DATE = dt.datetime(2022, 4, 20, tzinfo=dt.timezone.utc)
@@ -374,7 +374,7 @@ class Word2Vec(Base):
     __tablename__ = "word2vec"
 
     word = sa.Column(sa.Text, primary_key=True)
-    vec = sa.Column(sa.BLOB)
+    vec = sa.Column(sa.LargeBinary)
 
     @property
     def expanded_vec(self) -> list[float]:

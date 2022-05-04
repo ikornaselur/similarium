@@ -9,6 +9,15 @@ create_db_tables:
 prepare_data:
 	@poetry run python scripts/dump.py
 
+postgres:
+	@docker run \
+		--detach \
+		--publish 127.0.0.1:5432:5432 \
+		--env POSTGRES_PASSWORD=s3cr3t \
+		--name postgres \
+		postgres:14
+
+
 clean:
 	rm word2vec.db*
 	rm hints.json

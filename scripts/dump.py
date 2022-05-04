@@ -110,8 +110,9 @@ async def store_hints(nearest: dict[str, Similarities]) -> None:
         MofNCompleteColumn(),
     ) as progress:
         s: AsyncSession
-        async with db.session() as s:
-            await s.execute("PRAGMA journal_mode=WAL")
+        async with db.async_session() as s:
+            if config.database.uri.startswith("sqlite"):
+                await s.execute("PRAGMA journal_mode=WAL")
 
             for secret, neighbors in progress.track(
                 nearest.items(), description="Inserting hints to tables..."
@@ -149,8 +150,10 @@ async def dump_vecs(vectors: word2vec.KeyedVectors) -> None:
         MofNCompleteColumn(),
     ) as progress:
         s: AsyncSession
-        async with db.session() as s:
-            await s.execute("PRAGMA journal_mode=WAL")
+        async with db.async_session() as s:
+            if config.database.uri.startswith("sqlite"):
+                await s.execute("PRAGMA journal_mode=WAL")
+
             words: list[str]
             for words in chunked(
                 progress.track(
