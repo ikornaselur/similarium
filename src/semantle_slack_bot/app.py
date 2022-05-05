@@ -86,6 +86,7 @@ async def handle_some_action(ack, body, client, respond):
 
             try:
                 await game.add_guess(word=word, user_id=user_id, session=session)
+                await session.commit()
             except InvalidWord:
                 return
 

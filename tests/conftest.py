@@ -1,10 +1,8 @@
 # flake8: noqa: E402
-from logging import Logger
-from typing import AsyncIterator, Iterable
+from typing import AsyncIterator
 from unittest import mock
 
 import pytest
-from sqlalchemy.ext.asyncio.session import AsyncSession
 
 # We need to mock out the available secret words for tests
 SECRET_WORDS = ["apple", "excited", "future"]
@@ -37,31 +35,29 @@ async def db() -> AsyncIterator:
 
 
 @pytest.fixture()
-async def session(db) -> AsyncIterator:
-    async with db.async_session() as s:
-        yield s
+async def game_id(db) -> AsyncIterator[int]:
+    async with db.async_session() as session:
+        _game = Game.new(
+            channel_id="channel_x",
+            thread_ts="thread_x",
+            puzzle_number=21,
+        )
+        session.add(_game)
+        await session.commit()
+        await session.refresh(_game)
+
+    yield _game.id
 
 
 @pytest.fixture()
-async def game(session: AsyncSession) -> AsyncIterator[Game]:
-    _game = Game.new(
-        channel_id="channel_x",
-        thread_ts="thread_x",
-        puzzle_number=21,
-    )
-    session.add(_game)
-    await session.commit()
-    await session.refresh(_game)
-    yield _game
+async def user_id(db) -> AsyncIterator[str]:
+    async with db.async_session() as session:
+        _user = User(
+            id="user_x",
+            username="semantle-player",
+            profile_photo="http://example.com/profile.jpg",
+        )
+        session.add(_user)
+        await session.commit()
 
-
-@pytest.fixture()
-async def user(session: AsyncSession) -> AsyncIterator[User]:
-    _user = User(
-        id="user_x",
-        username="semantle-player",
-        profile_photo="http://example.com/profile.jpg",
-    )
-    session.add(_user)
-    await session.commit()
-    yield _user
+    yield _user.id
