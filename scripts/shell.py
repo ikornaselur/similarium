@@ -1,6 +1,6 @@
 from IPython import embed
 
-from semantle_slack_bot import db  # nowa: F401
+from semantle_slack_bot import db  # noqa: F401
 
 banner1 = """
 
