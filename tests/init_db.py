@@ -1,10 +1,10 @@
 # flake8: noqa: E501
 from semantle_slack_bot.models import Nearby, SimilarityRange, Word2Vec
-from semantle_slack_bot.db import async_session
+from semantle_slack_bot import db
 
 
 async def insert_data():
-    async with async_session() as session:
+    async with db.session() as session:
         await session.execute("PRAGMA journal_mode=MEMORY")
         await session.execute(
             Word2Vec.__table__.insert(),

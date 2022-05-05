@@ -55,7 +55,7 @@ async def handle_some_action(ack, body, client, respond):
     message_ts = body["container"]["message_ts"]
     channel = body["container"]["channel_id"]
 
-    async with db.async_session() as session:
+    async with db.session() as session:
         puzzle_number = get_puzzle_number()
         game = await Game.get(
             session=session,
@@ -137,7 +137,7 @@ async def message(body: Body, client, ack) -> None:
                 thread_ts=resp["ts"],
                 puzzle_number=get_puzzle_number(),
             )
-            async with db.async_session() as s:
+            async with db.session() as s:
                 s.add(game)
                 await s.commit()
 

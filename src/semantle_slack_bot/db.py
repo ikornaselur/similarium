@@ -10,4 +10,4 @@ from semantle_slack_bot.config import config
 Base = declarative_base()
 
 engine = create_async_engine(config.database.uri, future=True)
-async_session = sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)
+session = sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)

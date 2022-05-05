@@ -36,7 +36,7 @@ async def db() -> AsyncIterator:
 
 @pytest.fixture()
 async def game_id(db) -> AsyncIterator[int]:
-    async with db.async_session() as session:
+    async with db.session() as session:
         _game = Game.new(
             channel_id="channel_x",
             thread_ts="thread_x",
@@ -51,7 +51,7 @@ async def game_id(db) -> AsyncIterator[int]:
 
 @pytest.fixture()
 async def user_id(db) -> AsyncIterator[str]:
-    async with db.async_session() as session:
+    async with db.session() as session:
         _user = User(
             id="user_x",
             username="semantle-player",

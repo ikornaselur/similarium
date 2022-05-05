@@ -111,7 +111,7 @@ async def store_hints(nearest: dict[str, Similarities]) -> None:
         MofNCompleteColumn(),
     ) as progress:
         s: AsyncSession
-        async with db.async_session() as s:
+        async with db.session() as s:
             if config.database.uri.startswith("sqlite"):
                 await s.execute("PRAGMA journal_mode=WAL")
 
@@ -151,7 +151,7 @@ async def dump_vecs(vectors: word2vec.KeyedVectors) -> None:
         MofNCompleteColumn(),
     ) as progress:
         s: AsyncSession
-        async with db.async_session() as s:
+        async with db.session() as s:
             if config.database.uri.startswith("sqlite"):
                 await s.execute("PRAGMA journal_mode=WAL")
 
