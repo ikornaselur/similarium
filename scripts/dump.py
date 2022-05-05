@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from semantle_slack_bot import db
 from semantle_slack_bot.config import config
+from semantle_slack_bot.models import Nearby, SimilarityRange, Word2Vec
 from semantle_slack_bot.target_words import target_words
 
 ROOT = Path(__file__).parent.parent
@@ -118,7 +119,7 @@ async def store_hints(nearest: dict[str, Similarities]) -> None:
                 nearest.items(), description="Inserting hints to tables..."
             ):
                 await s.execute(
-                    db.Nearby.__table__.insert(),
+                    Nearby.__table__.insert(),
                     [
                         {
                             "word": secret,
@@ -131,7 +132,7 @@ async def store_hints(nearest: dict[str, Similarities]) -> None:
                 )
 
                 await s.execute(
-                    db.SimilarityRange.__table__.insert(),
+                    SimilarityRange.__table__.insert(),
                     {
                         "word": secret,
                         "top": neighbors[-2][0],
@@ -162,7 +163,7 @@ async def dump_vecs(vectors: word2vec.KeyedVectors) -> None:
                 )
             ):
                 await s.execute(
-                    db.Word2Vec.__table__.insert(),
+                    Word2Vec.__table__.insert(),
                     [{"word": word, "vec": bfloat(vectors[word])} for word in words],
                 )
                 await s.flush()

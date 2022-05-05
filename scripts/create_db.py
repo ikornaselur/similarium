@@ -8,7 +8,10 @@ from rich.prompt import Confirm
 from semantle_slack_bot import db
 from semantle_slack_bot.config import config
 
-SQLITE_SCHEMA = "sqlite+aiosqlite://"
+# Import all models so they get created
+from semantle_slack_bot.models import *  # noqa: F401, F403
+
+SQLITE_SCHEMA = "sqlite+aiosqlite:///"
 POSTGRES_SCHEMA = "postgresql+asyncpg://"
 
 

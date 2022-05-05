@@ -1,7 +1,16 @@
-from semantle_slack_bot.db import Game, User
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from sqlalchemy.ext.asyncio.session import AsyncSession
+
+if TYPE_CHECKING:
+    from semantle_slack_bot.models import Game, User
 
 
-async def test_game_add_guess_adds_guess(session, game: Game, user: User) -> None:
+async def test_game_add_guess_adds_guess(
+    session: AsyncSession, game: Game, user: User
+) -> None:
     assert game.guesses == []
 
     await game.add_guess(session=session, word="berry", user_id=user.id)
@@ -11,7 +20,7 @@ async def test_game_add_guess_adds_guess(session, game: Game, user: User) -> Non
 
 
 async def test_game_add_guess_handles_duplicates(
-    session, game: Game, user: User
+    session: AsyncSession, game: Game, user: User
 ) -> None:
     assert game.guesses == []
 

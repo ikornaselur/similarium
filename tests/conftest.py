@@ -1,8 +1,10 @@
 # flake8: noqa: E402
-from typing import AsyncIterator
+from logging import Logger
+from typing import AsyncIterator, Iterable
 from unittest import mock
 
 import pytest
+from sqlalchemy.ext.asyncio.session import AsyncSession
 
 # We need to mock out the available secret words for tests
 SECRET_WORDS = ["apple", "excited", "future"]
@@ -16,6 +18,7 @@ from semantle_slack_bot.config import config as _config
 # is imported
 _config.database.uri = "sqlite+aiosqlite:///:memory:"
 from semantle_slack_bot import db as _db
+from semantle_slack_bot.models import Game, User
 from tests.init_db import insert_data
 
 
@@ -40,8 +43,8 @@ async def session(db) -> AsyncIterator:
 
 
 @pytest.fixture()
-async def game(db, session) -> AsyncIterator[_db.Game]:
-    _game = db.Game.new(
+async def game(session: AsyncSession) -> AsyncIterator[Game]:
+    _game = Game.new(
         channel_id="channel_x",
         thread_ts="thread_x",
         puzzle_number=21,
@@ -53,8 +56,8 @@ async def game(db, session) -> AsyncIterator[_db.Game]:
 
 
 @pytest.fixture()
-async def user(db, session) -> AsyncIterator[_db.User]:
-    _user = db.User(
+async def user(session: AsyncSession) -> AsyncIterator[User]:
+    _user = User(
         id="user_x",
         username="semantle-player",
         profile_photo="http://example.com/profile.jpg",

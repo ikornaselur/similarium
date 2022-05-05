@@ -33,7 +33,7 @@ server:
 	@poetry run python -m semantle_slack_bot.app
 
 test:
-	@poetry run pytest tests -vvs
+	@LOG_LEVEL=ERROR poetry run pytest tests -vvs
 
 shell:
-	@poetry run ipython
+	@poetry run python scripts/shell.py

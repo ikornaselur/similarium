@@ -1,12 +1,13 @@
 # flake8: noqa: E501
-from semantle_slack_bot import db
+from semantle_slack_bot.models import Nearby, SimilarityRange, Word2Vec
+from semantle_slack_bot.db import async_session
 
 
 async def insert_data():
-    async with db.async_session() as s:
-        await s.execute("PRAGMA journal_mode=MEMORY")
-        await s.execute(
-            db.Word2Vec.__table__.insert(),
+    async with async_session() as session:
+        await session.execute("PRAGMA journal_mode=MEMORY")
+        await session.execute(
+            Word2Vec.__table__.insert(),
             [
                 {
                     "word": "apple",
@@ -190,8 +191,8 @@ async def insert_data():
                 },
             ],
         )
-        await s.execute(
-            db.Nearby.__table__.insert(),
+        await session.execute(
+            Nearby.__table__.insert(),
             [
                 {
                     "word": "apple",
@@ -447,8 +448,8 @@ async def insert_data():
                 },
             ],
         )
-        await s.execute(
-            db.SimilarityRange.__table__.insert(),
+        await session.execute(
+            SimilarityRange.__table__.insert(),
             [
                 {
                     "word": "apple",
@@ -470,4 +471,4 @@ async def insert_data():
                 },
             ],
         )
-        await s.commit()
+        await session.commit()

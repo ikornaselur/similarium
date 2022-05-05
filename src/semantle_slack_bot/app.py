@@ -7,9 +7,11 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from semantle_slack_bot import db
 from semantle_slack_bot.event_types import Body
-from semantle_slack_bot.exceptions import NotFound
+from semantle_slack_bot.exceptions import InvalidWord, NotFound
 from semantle_slack_bot.logging import logger
+from semantle_slack_bot.models import Game, User
 from semantle_slack_bot.slack import SlackGame
+from semantle_slack_bot.utils import get_puzzle_number
 
 app = AsyncApp(token=os.environ["SLACK_BOT_TOKEN"])
 
@@ -19,7 +21,7 @@ TOP_GUESSES_TO_SHOW = 15
 LATEST_GUESSES_TO_SHOW = 3
 
 
-async def get_thread_blocks(session: AsyncSession, game: db.Game) -> list:
+async def get_thread_blocks(session: AsyncSession, game: Game) -> list:
     slack_game = SlackGame(game)
     blocks = [
         slack_game.header,
@@ -54,8 +56,8 @@ async def handle_some_action(ack, body, client, respond):
     channel = body["container"]["channel_id"]
 
     async with db.async_session() as session:
-        puzzle_number = db.Game.get_today_puzzle_number()
-        game = await db.Game.get(
+        puzzle_number = get_puzzle_number()
+        game = await Game.get(
             session=session,
             channel_id=channel,
             thread_ts=message_ts,
@@ -70,11 +72,11 @@ async def handle_some_action(ack, body, client, respond):
             word = match.group("guess").lower()
             user_id = body["user"]["id"]
 
-            user = await db.User.by_id(user_id, session=session)
+            user = await User.by_id(user_id, session=session)
             if user is None:
                 user_info = await client.users_info(user=user_id)
                 user_data = user_info.data["user"]
-                user = db.User(
+                user = User(
                     id=user_id,
                     profile_photo=user_data["profile"]["image_24"],
                     username=user_data["name"],
@@ -84,7 +86,7 @@ async def handle_some_action(ack, body, client, respond):
 
             try:
                 await game.add_guess(word=word, user_id=user_id, session=session)
-            except db.InvalidWord:
+            except InvalidWord:
                 return
 
             await respond(
@@ -105,6 +107,7 @@ async def message(body: Body, client, ack) -> None:
 
         if message == "!start":
             resp = await client.chat_postMessage(
+                text="Semantle day 4 - April 25th",
                 channel=channel,
                 blocks=[
                     {
@@ -128,10 +131,10 @@ async def message(body: Body, client, ack) -> None:
                     },
                 ],
             )
-            game = db.Game.new(
+            game = Game.new(
                 channel_id=channel,
                 thread_ts=resp["ts"],
-                puzzle_number=db.Game.get_today_puzzle_number(),
+                puzzle_number=get_puzzle_number(),
             )
             async with db.async_session() as s:
                 s.add(game)
