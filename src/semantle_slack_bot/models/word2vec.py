@@ -22,7 +22,7 @@ class Word2Vec(Base):
         return list(struct.unpack("300f", expand_bfloat(self.vec)))
 
     @classmethod
-    async def get(cls, *, session: AsyncSession, word: str) -> Optional[Word2Vec]:
+    async def get(cls, word: str, /, *, session: AsyncSession) -> Optional[Word2Vec]:
         stmt = select(cls).where(cls.word == word)
         result = await session.execute(stmt)
         return result.scalars().one_or_none()

@@ -48,12 +48,17 @@ For each secret, few neighboring words were picked, based on their percentile:
 
 The following words are in the test database:
 
-  anticipation, anyone, apple, apples, berry, blueberry, caramel,
+  anticipation, anyone, apple, apples, berry, blueberry, caramel, cherries,
   circumstanced, continue, current, delighted, ecstatic, effused, elated,
   enthused, excited, exciting, forewarning, forthcoming, fruit, future, grape,
   happy, kind, marveled, next, nutshells, peach, pear, pears, pleased, potato,
   potential, prospects, proud, psyched, seedpods, someday, strawberry,
   thrilled, uncertain, upcoming, vagaries, varieties, viability,
+
+"cherries" is a special word which has a Word2Vec entry, but no Nearby entry.
+It has a 989 percentile normally to "apple", but was added this way to be
+easily able to test similar words that end up not being found in the
+pre-populated "nearby" words. This would be a '???' word in the original game.
 
 
 ## Attributions

@@ -33,7 +33,11 @@ class Game(Base):
     date = sa.Column(sa.Text, nullable=False)
     active = sa.Column(sa.Boolean, nullable=False)
     secret = sa.Column(sa.Text, nullable=False)
+
     guesses = relationship("Guess", backref="game", lazy="joined")
+    similarity_range = relationship(
+        "SimilarityRange", primaryjoin="foreign(Game.secret) == SimilarityRange.word"
+    )
 
     __table_args__ = (Index("channel_thread_idx", channel_id, thread_ts),)
 
@@ -79,6 +83,7 @@ class Game(Base):
                 cls.puzzle_number == puzzle_number,
             )
             .options(selectinload(cls.guesses))
+            .options(selectinload(cls.similarity_range))
         )
 
         result = await session.execute(stmt)
@@ -87,10 +92,14 @@ class Game(Base):
 
     @classmethod
     async def by_id(cls, game_id: int, /, *, session: AsyncSession) -> Optional[Game]:
-        result = await session.execute(
-            select(cls).where(cls.id == game_id).options(selectinload(cls.guesses))
-        )
-        return result.scalars().one_or_none()
+        return (
+            await session.scalars(
+                select(cls)
+                .where(cls.id == game_id)
+                .options(selectinload(cls.guesses))
+                .options(selectinload(cls.similarity_range))
+            )
+        ).one_or_none()
 
     async def add_guess(
         self, *, word: str, user_id: str, session: AsyncSession
@@ -116,13 +125,13 @@ class Game(Base):
         try:
             nearby = await Nearby.get(session=session, word=self.secret, neighbor=word)
         except NotFound:
-            guess_vec = await Word2Vec.get(session=session, word=word)
+            guess_vec = await Word2Vec.get(word, session=session)
             if guess_vec is None:
                 logger.debug(f"Word not recognised: {word=}")
                 raise InvalidWord(f"Word not recognised: {word}")
 
             logger.debug(f"Guess was not within {config.rules.similarity_count}")
-            secret_vec = await Word2Vec.get(session=session, word=self.secret)
+            secret_vec = await Word2Vec.get(self.secret, session=session)
             if secret_vec is None:
                 raise Exception("Secret word not recognised?")
 
