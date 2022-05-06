@@ -1,15 +1,18 @@
 import os
 import re
 
+import pytz
 from slack_bolt.adapter.socket_mode.aiohttp import AsyncSocketModeHandler
 from slack_bolt.app.async_app import AsyncApp
 from sqlalchemy.ext.asyncio.session import AsyncSession
+from sqlalchemy.sql.expression import delete
 
 from similarium import db
+from similarium.command import Start, Stop, parse_command
 from similarium.event_types import Body
-from similarium.exceptions import InvalidWord, NotFound
+from similarium.exceptions import InvalidWord, NotFound, ParseException
 from similarium.logging import configure_logger, logger
-from similarium.models import Game, User
+from similarium.models import Channel, Game, User
 from similarium.slack import SlackGame
 from similarium.utils import get_header_text, get_puzzle_date, get_puzzle_number
 
@@ -94,6 +97,68 @@ async def handle_some_action(ack, body, client, respond):
                 text="Update to todays game",
                 blocks=await get_thread_blocks(session, game),
             )
+
+
+@app.command("/similarium")
+async def slash(ack, respond, command, client):
+    await ack()
+
+    text = command["text"].strip()
+    try:
+        parsed_command = parse_command(text)
+    except ParseException as e:
+        await respond(text=str(e))
+        return
+    logger.info(f"Received {parsed_command} command")
+    channel_id = command["channel_id"]
+
+    if isinstance(parsed_command, Start):
+        # Check if there is already a game registered for the channel
+        async with db.session() as session:
+            channel = await Channel.by_id(channel_id, session=session)
+        if channel is not None:
+            logger.debug(f"Game was already registered for {channel_id=}")
+            await respond(
+                text=(
+                    ":no_entry_sign: Game is already registered for the channel. Please"
+                    ' use the "stop" command before running "start" again.'
+                )
+            )
+            return
+
+        # Get user timezone to normalize the game posting to UTC+0
+        user_info = await client.users_info(user=command["user_id"])
+        user_data = user_info.data["user"]
+        timezone = pytz.timezone(user_data["tz"])
+        time = parsed_command.when.replace(tzinfo=timezone)
+
+        channel = Channel(
+            id=channel_id,
+            time=time,
+        )
+        logger.debug(f"Adding Channel {channel_id=}")
+        async with db.session() as session:
+            session.add(channel)
+            await session.commit()
+    elif isinstance(parsed_command, Stop):
+        async with db.session() as session:
+            channel = await Channel.by_id(channel_id, session=session)
+        if channel is None:
+            logger.debug(f"No game was registered {channel_id=}")
+            await respond(
+                text=(
+                    ":no_entry_sign: No game is registered for the channel, did you"
+                    ' mean to run "start"?'
+                )
+            )
+            return
+        logger.debug(f"Deleting {channel}")
+        async with db.session() as session:
+            stmt = delete(Channel).where(Channel.id == channel.id)
+            await session.execute(stmt)
+            await session.commit()
+
+    await respond(text=parsed_command.text, blocks=parsed_command.blocks)
 
 
 @app.event("message")

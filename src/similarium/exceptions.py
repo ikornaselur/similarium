@@ -6,6 +6,10 @@ class InvalidWord(SimilariumException):
     pass
 
 
+class ParseException(SimilariumException):
+    pass
+
+
 class DatabaseException(SimilariumException):
     pass
 
