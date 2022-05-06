@@ -4,7 +4,12 @@ bad_words = "scripts/wordlists/bad.txt"
 vectors = "GoogleNews-vectors-negative300.bin"
 
 [database]
-name = "semantle.db"
+# For postgres: "postgresql+asyncpg://<user>:<password>@<hostname>:<port>"
+# For sqlite3: "sqlite+aiosqlite:///<path/to/database.db>"
+# For in-memory: "sqlite+aiosqlite:///:memory:"
+
+# uri = "postgresql+asyncpg://postgres:s3cr3t@localhost:5432"
+uri = "sqlite+aiosqlite:///semantle.db"
 
 [rules]
 similarity_count = 1000

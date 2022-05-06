@@ -1,8 +1,10 @@
 import math
 from typing import Literal, Optional, TypedDict
 
-from semantle_slack_bot import db
+from sqlalchemy.ext.asyncio.session import AsyncSession
+
 from semantle_slack_bot.logging import logger
+from semantle_slack_bot.models import Game, Guess
 from semantle_slack_bot.utils import get_custom_progress_bar
 
 SPACE = " "
@@ -67,11 +69,11 @@ class GuessContextBlock(TypedDict):
 class SlackGame:
     """A slack game instance"""
 
-    _game: db.Game
+    _game: Game
     input_action_id: str = "submit-guess"
     input_block_id: str = "guess-input"
 
-    def __init__(self, game: db.Game) -> None:
+    def __init__(self, game: Game) -> None:
         self._game = game
 
     @property
@@ -122,9 +124,8 @@ class SlackGame:
             },
         }
 
-    @property
-    async def won(self) -> Optional[MarkdownSectionBlock]:
-        top_guesses = await self._game.top_guesses(1)
+    async def won(self, *, session: AsyncSession) -> Optional[MarkdownSectionBlock]:
+        top_guesses = await self._game.top_guesses(1, session=session)
         if (
             not len(top_guesses)
             or (top_guess := top_guesses[0]).word != self._game.secret
@@ -142,7 +143,7 @@ class SlackGame:
 
         return self.markdown_section(text=text)
 
-    def guess_context(self, guess: db.Guess, base_id: str) -> GuessContextBlock:
+    def guess_context(self, guess: Guess, base_id: str) -> GuessContextBlock:
         closeness = _closeness(guess)
 
         if guess.percentile == 1000:
@@ -169,7 +170,7 @@ class SlackGame:
         }
 
 
-def _closeness(guess: db.Guess) -> str:
+def _closeness(guess: Guess) -> str:
     if guess.percentile:
         if guess.percentile < 10:
             percentile = f"{SPACE * 7}{guess.percentile}"
@@ -186,15 +187,16 @@ def _closeness(guess: db.Guess) -> str:
     return f"{get_custom_progress_bar(0, 1000, width=6)}{SPACE * 14}cold"
 
 
-def _idx(guess: db.Guess) -> str:
+def _idx(guess: Guess) -> str:
     # Magic!
     # Add 6 spaces for idx < 10, 4 spaces for idx < 100, else 2 spaces
+    # TODO: over 100 seems to not work
     postfix = max(2 - int(math.log10(guess.idx)), 1) * (SPACE * 2)
 
     return f"{guess.idx}.{postfix}"
 
 
-def _similarity(guess: db.Guess) -> str:
+def _similarity(guess: Guess) -> str:
     prefix = ""
     if guess.similarity >= 0:
         # Account for negative symbol
@@ -206,5 +208,5 @@ def _similarity(guess: db.Guess) -> str:
     return f"_{prefix}{guess.similarity:.02f}_       "
 
 
-def _word(guess: db.Guess) -> str:
+def _word(guess: Guess) -> str:
     return f"*{guess.word}*"

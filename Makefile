@@ -1,10 +1,22 @@
-all: wordlists prepare_database
+all: wordlists create_db_tables prepare_data
 
 wordlists:
 	@cd scripts && ./download-wordlists.sh
 
-prepare_database:
+create_db_tables:
+	@poetry run python scripts/create_db.py
+
+prepare_data:
 	@poetry run python scripts/dump.py
+
+postgres:
+	@docker run \
+		--detach \
+		--publish 127.0.0.1:5432:5432 \
+		--env POSTGRES_PASSWORD=s3cr3t \
+		--name postgres \
+		postgres:14
+
 
 clean:
 	rm word2vec.db*
@@ -14,11 +26,14 @@ clean:
 lint:
 	@poetry run flake8 scripts src
 
+pyright:
+	@poetry run pyright scripts src
+
 server:
 	@poetry run python -m semantle_slack_bot.app
 
 test:
-	@poetry run pytest tests -vvs
+	@LOG_LEVEL=ERROR poetry run pytest tests -vvs
 
 shell:
-	@poetry run ipython
+	@poetry run python scripts/shell.py

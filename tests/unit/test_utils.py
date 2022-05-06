@@ -119,9 +119,9 @@ def test_get_secret_is_consistent_for_input() -> None:
 
 
 def test_get_secret_is_different_for_different_channels() -> None:
-    secret = get_secret(channel="foo", day=1)
+    secret = get_secret(channel="chan_1", day=1)
 
-    assert get_secret(channel="bar", day=1) != secret
+    assert get_secret(channel="chan_2", day=1) != secret
 
 
 def test_get_secret_is_different_for_different_day() -> None:

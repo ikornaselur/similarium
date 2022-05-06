@@ -1,9 +1,13 @@
+import datetime as dt
 import math
 import random
+from typing import Optional
 
 from semantle_slack_bot.target_words import target_words
 
 Vector = list[float]
+
+BASE_DATE = dt.datetime(2022, 4, 20, tzinfo=dt.timezone.utc)
 
 
 def dot(A: Vector, B: Vector) -> float:
@@ -90,3 +94,46 @@ def get_secret(channel: str, day: int) -> str:
     rng = random.Random(channel)
     channel_secrets = rng.sample(target_words, len(target_words))
     return channel_secrets[day % len(target_words)]
+
+
+def get_puzzle_date(puzzle_number: int) -> str:
+    """Get the puzzle date based on puzzle number
+
+    Puzzle number #0 will be on the BASE_DATE
+
+    TODO: Deal with time zones
+    """
+    date = BASE_DATE + dt.timedelta(days=puzzle_number)
+    return date.strftime("%A %B %-d")
+
+
+def get_puzzle_number(date: Optional[dt.datetime] = None) -> int:
+    """Return what puzzle number is today
+
+    Puzzle number is the number of days since BASE_DATE
+
+    TODO: Deal with timezones
+    """
+    if date is None:
+        date = dt.datetime.now(dt.timezone.utc)
+    return (date - BASE_DATE).days
+
+
+def expand_bfloat(vec: bytes, half_length: int = 600) -> bytes:
+    """
+    expand truncated float32 to float32
+    """
+    if len(vec) == half_length:
+        vec = b"".join((b"\00\00" + bytes(pair)) for pair in zip(vec[::2], vec[1::2]))
+    return vec
+
+
+def timestamp_ms() -> int:
+    """Return the elapsed milliseconds since the BASE_DATE
+
+    This is just used to order guesses in chronological order
+    """
+    now = dt.datetime.now(dt.timezone.utc)
+    delta = now - BASE_DATE
+
+    return int(delta.total_seconds() * 1000)  # Milliseconds
