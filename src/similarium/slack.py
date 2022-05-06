@@ -3,9 +3,9 @@ from typing import Literal, Optional, TypedDict
 
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
-from semantle_slack_bot.logging import logger
-from semantle_slack_bot.models import Game, Guess
-from semantle_slack_bot.utils import get_custom_progress_bar
+from similarium.logging import logger
+from similarium.models import Game, Guess
+from similarium.utils import get_custom_progress_bar
 
 SPACE = " "
 
@@ -80,14 +80,14 @@ class SlackGame:
     def header(self) -> HeaderBlock:
         """The header of the game message
 
-        The header will state the Semantle puzzle number it is and the date
+        The header will state the Similarium puzzle number it is and the date
         """
         return {
             "type": "header",
             "text": {
                 "type": "plain_text",
                 "text": (
-                    f"Semantle puzzle #{self._game.puzzle_number}"
+                    f"Similarium puzzle #{self._game.puzzle_number}"
                     f" - {self._game.date}"
                 ),
                 "emoji": True,

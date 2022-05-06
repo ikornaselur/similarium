@@ -3,7 +3,7 @@ import math
 import random
 from typing import Optional
 
-from semantle_slack_bot.target_words import target_words
+from similarium.target_words import target_words
 
 Vector = list[float]
 

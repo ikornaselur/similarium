@@ -5,13 +5,13 @@ from slack_bolt.adapter.socket_mode.aiohttp import AsyncSocketModeHandler
 from slack_bolt.app.async_app import AsyncApp
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
-from semantle_slack_bot import db
-from semantle_slack_bot.event_types import Body
-from semantle_slack_bot.exceptions import InvalidWord, NotFound
-from semantle_slack_bot.logging import logger
-from semantle_slack_bot.models import Game, User
-from semantle_slack_bot.slack import SlackGame
-from semantle_slack_bot.utils import get_puzzle_number
+from similarium import db
+from similarium.event_types import Body
+from similarium.exceptions import InvalidWord, NotFound
+from similarium.logging import logger
+from similarium.models import Game, User
+from similarium.slack import SlackGame
+from similarium.utils import get_puzzle_number
 
 app = AsyncApp(token=os.environ["SLACK_BOT_TOKEN"])
 
@@ -108,14 +108,14 @@ async def message(body: Body, client, ack) -> None:
 
         if message == "!start":
             resp = await client.chat_postMessage(
-                text="Semantle day 4 - April 25th",
+                text="Similarium day 4 - April 25th",
                 channel=channel,
                 blocks=[
                     {
                         "type": "header",
                         "text": {
                             "type": "plain_text",
-                            "text": "Semantle day 4 - April 25th",
+                            "text": "Similarium day 4 - April 25th",
                             "emoji": True,
                         },
                     },

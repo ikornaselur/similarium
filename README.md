@@ -1,6 +1,7 @@
-# Semantle Slack Bot
-A Slack bot to play [Semantle](https://semantle.novalis.org/) together as a
-team on a Slack channel.
+# Similarium
+A Slack bot to play Similarium together as a team on a Slack channel.
+
+Similarium is based on [Semantle](https://semantle.com/)
 
 ## Development
 

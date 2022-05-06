@@ -1,6 +1,6 @@
 # flake8: noqa: E501
-from semantle_slack_bot.models import Nearby, SimilarityRange, Word2Vec
-from semantle_slack_bot import db
+from similarium.models import Nearby, SimilarityRange, Word2Vec
+from similarium import db
 
 
 async def insert_data():

@@ -1,6 +1,6 @@
 import pytest
 
-from semantle_slack_bot.utils import cos_sim, get_custom_progress_bar, get_secret
+from similarium.utils import cos_sim, get_custom_progress_bar, get_secret
 
 
 def test_get_custom_progress_bar_no_progress() -> None:

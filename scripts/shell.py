@@ -3,23 +3,23 @@ from IPython import embed
 
 from sqlalchemy.future import select
 
-from semantle_slack_bot import db
-from semantle_slack_bot.models import *
+from similarium import db
+from similarium.models import *
 
 banner1 = """
+███████╗██╗███╗   ███╗██╗██╗      █████╗ ██████╗ ██╗██╗   ██╗███╗   ███╗
+██╔════╝██║████╗ ████║██║██║     ██╔══██╗██╔══██╗██║██║   ██║████╗ ████║
+███████╗██║██╔████╔██║██║██║     ███████║██████╔╝██║██║   ██║██╔████╔██║
+╚════██║██║██║╚██╔╝██║██║██║     ██╔══██║██╔══██╗██║██║   ██║██║╚██╔╝██║
+███████║██║██║ ╚═╝ ██║██║███████╗██║  ██║██║  ██║██║╚██████╔╝██║ ╚═╝ ██║
+╚══════╝╚═╝╚═╝     ╚═╝╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝ ╚═════╝ ╚═╝     ╚═╝
 
-███████╗███████╗███╗   ███╗ █████╗ ███╗   ██╗████████╗██╗     ███████╗
-██╔════╝██╔════╝████╗ ████║██╔══██╗████╗  ██║╚══██╔══╝██║     ██╔════╝
-███████╗█████╗  ██╔████╔██║███████║██╔██╗ ██║   ██║   ██║     █████╗
-╚════██║██╔══╝  ██║╚██╔╝██║██╔══██║██║╚██╗██║   ██║   ██║     ██╔══╝
-███████║███████╗██║ ╚═╝ ██║██║  ██║██║ ╚████║   ██║   ███████╗███████╗
-╚══════╝╚══════╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚══════╝
 Preloaded imports:
 
     from sqlalchemy.future import select
 
-    from semantle_slack_bot import db
-    from semantle_slack_bot.models import *
+    from similarium import db
+    from similarium.models import *
 """
 
 embed(using="asyncio", colors="Neutral", banner1=banner1)
