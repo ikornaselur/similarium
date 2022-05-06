@@ -6,7 +6,7 @@ authors = ["Axel <dev@absalon.is>"]
 license = "GNU GPLv3"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "~3.10"
 slack-sdk = "^3.15.2"
 slack-bolt = "^1.13.0"
 aiohttp = "^3.8.1"
@@ -14,6 +14,7 @@ SQLAlchemy = "^1.4.35"
 rich = "^12.2.0"
 gensim = {version = "^4.1.2", optional = true}
 numpy = {version = "^1.22.3", optional = true}
+scipy = {version = "^1.8.0", optional = true}
 toml = "^0.10.2"
 aiosqlite = {version = "^0.17.0", optional = true}
 asyncpg = {version = "^0.25.0", optional = true}
@@ -37,7 +38,7 @@ sqlalchemy-stubs = "^0.4"
 pytest-asyncio = "^0.18.3"
 
 [tool.poetry.extras]
-dump = ["numpy", "gensim"]
+dump = ["numpy", "gensim", "scipy"]
 sqlite = ["aiosqlite"]
 postgres = ["asyncpg"]
 
@@ -54,8 +55,8 @@ src_paths = ["src", "tests"]
 extra_standard_library = ["typing_extensions"]
 
 [tool.black]
-target-version = ["py39"]
+target-version = ["py310"]
 
 [tool.pyright]
-pythonVersion = "3.9"
+pythonVersion = "3.10"
 include = ["src", "tests"]
