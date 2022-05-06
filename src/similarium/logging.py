@@ -3,11 +3,10 @@ import os
 
 from rich.logging import RichHandler
 
-logging.basicConfig(
-    format="%(message)s",
-    datefmt="[%X]",
-    handlers=[RichHandler(log_time_format="[%X]", markup=False)],
-)
-
 logger = logging.getLogger("similarium")
 logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
+
+
+def configure_logger() -> None:
+    logger.handlers.clear()
+    logger.addHandler(RichHandler(log_time_format="[%X]", markup=False))

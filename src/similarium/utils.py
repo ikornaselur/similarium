@@ -137,3 +137,8 @@ def timestamp_ms() -> int:
     delta = now - BASE_DATE
 
     return int(delta.total_seconds() * 1000)  # Milliseconds
+
+
+def get_header_text(puzzle_number: int, puzzle_date: str) -> str:
+    """Generate header text for a Slack message"""
+    return f"{puzzle_date} - Puzzle number {puzzle_number}"

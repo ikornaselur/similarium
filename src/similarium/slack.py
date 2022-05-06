@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from similarium.logging import logger
 from similarium.models import Game, Guess
-from similarium.utils import get_custom_progress_bar
+from similarium.utils import get_custom_progress_bar, get_header_text
 
 SPACE = " "
 
@@ -86,10 +86,7 @@ class SlackGame:
             "type": "header",
             "text": {
                 "type": "plain_text",
-                "text": (
-                    f"Similarium puzzle #{self._game.puzzle_number}"
-                    f" - {self._game.date}"
-                ),
+                "text": get_header_text(self._game.puzzle_number, self._game.date),
                 "emoji": True,
             },
         }

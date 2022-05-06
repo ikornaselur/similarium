@@ -33,7 +33,7 @@ server:
 	@poetry run python -m similarium.app
 
 test:
-	@LOG_LEVEL=ERROR poetry run pytest tests -vvs
+	@poetry run pytest tests -vvs
 
 shell:
 	@poetry run python scripts/shell.py

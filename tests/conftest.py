@@ -41,6 +41,7 @@ async def game_id(db) -> AsyncIterator[int]:
             channel_id="channel_x",
             thread_ts="thread_x",
             puzzle_number=21,
+            puzzle_date="April 21st",
         )
         session.add(_game)
         await session.commit()

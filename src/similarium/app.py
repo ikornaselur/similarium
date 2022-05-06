@@ -8,10 +8,10 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 from similarium import db
 from similarium.event_types import Body
 from similarium.exceptions import InvalidWord, NotFound
-from similarium.logging import logger
+from similarium.logging import configure_logger, logger
 from similarium.models import Game, User
 from similarium.slack import SlackGame
-from similarium.utils import get_puzzle_number
+from similarium.utils import get_header_text, get_puzzle_date, get_puzzle_number
 
 app = AsyncApp(token=os.environ["SLACK_BOT_TOKEN"])
 
@@ -107,15 +107,19 @@ async def message(body: Body, client, ack) -> None:
         message = event.get("text")
 
         if message == "!start":
+            puzzle_number = get_puzzle_number()
+            puzzle_date = get_puzzle_date(puzzle_number)
+            header_text = get_header_text(puzzle_number, puzzle_date)
+
             resp = await client.chat_postMessage(
-                text="Similarium day 4 - April 25th",
+                text=header_text,
                 channel=channel,
                 blocks=[
                     {
                         "type": "header",
                         "text": {
                             "type": "plain_text",
-                            "text": "Similarium day 4 - April 25th",
+                            "text": header_text,
                             "emoji": True,
                         },
                     },
@@ -135,7 +139,8 @@ async def message(body: Body, client, ack) -> None:
             game = Game.new(
                 channel_id=channel,
                 thread_ts=resp["ts"],
-                puzzle_number=get_puzzle_number(),
+                puzzle_number=puzzle_number,
+                puzzle_date=puzzle_date,
             )
             async with db.session() as s:
                 s.add(game)
@@ -143,6 +148,8 @@ async def message(body: Body, client, ack) -> None:
 
 
 async def main() -> None:
+    configure_logger()
+
     handler = AsyncSocketModeHandler(app, os.environ["SLACK_APP_TOKEN"])
     await handler.start_async()
 

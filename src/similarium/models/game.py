@@ -12,7 +12,7 @@ from similarium.config import config
 from similarium.db import Base
 from similarium.exceptions import InvalidWord, NotFound
 from similarium.logging import logger
-from similarium.utils import get_puzzle_date, get_secret, get_similarity, timestamp_ms
+from similarium.utils import get_secret, get_similarity, timestamp_ms
 
 if TYPE_CHECKING:
     from similarium.models import Guess
@@ -43,6 +43,7 @@ class Game(Base):
         channel_id: str,
         thread_ts: str,
         puzzle_number: int,
+        puzzle_date: str,
         active: bool = True,
     ) -> Game:
         secret = get_secret(channel_id, puzzle_number)
@@ -53,7 +54,7 @@ class Game(Base):
             channel_id=channel_id,
             thread_ts=thread_ts,
             puzzle_number=puzzle_number,
-            date=get_puzzle_date(puzzle_number),
+            date=puzzle_date,
             active=active,
             secret=secret,
         )
