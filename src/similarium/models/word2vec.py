@@ -7,8 +7,8 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.future import select
 
-from semantle_slack_bot.db import Base
-from semantle_slack_bot.utils import expand_bfloat
+from similarium.db import Base
+from similarium.utils import expand_bfloat
 
 
 class Word2Vec(Base):

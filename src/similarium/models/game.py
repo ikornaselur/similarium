@@ -8,19 +8,14 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import relationship, selectinload
 from sqlalchemy.sql.schema import Index
 
-from semantle_slack_bot.config import config
-from semantle_slack_bot.db import Base
-from semantle_slack_bot.exceptions import InvalidWord, NotFound
-from semantle_slack_bot.logging import logger
-from semantle_slack_bot.utils import (
-    get_puzzle_date,
-    get_secret,
-    get_similarity,
-    timestamp_ms,
-)
+from similarium.config import config
+from similarium.db import Base
+from similarium.exceptions import InvalidWord, NotFound
+from similarium.logging import logger
+from similarium.utils import get_puzzle_date, get_secret, get_similarity, timestamp_ms
 
 if TYPE_CHECKING:
-    from semantle_slack_bot.models import Guess
+    from similarium.models import Guess
 
 
 class Game(Base):

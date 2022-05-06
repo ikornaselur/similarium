@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.session import sessionmaker
 
-from semantle_slack_bot.config import config
+from similarium.config import config
 
 Base = declarative_base()
 

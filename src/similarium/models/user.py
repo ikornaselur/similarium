@@ -6,7 +6,7 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.future import select
 
-from semantle_slack_bot.db import Base
+from similarium.db import Base
 
 
 class User(Base):

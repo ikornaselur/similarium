@@ -6,11 +6,11 @@ from pathlib import Path
 from rich.console import Console
 from rich.prompt import Confirm
 
-from semantle_slack_bot import db
-from semantle_slack_bot.config import config
+from similarium import db
+from similarium.config import config
 
 # Import all models so they get created
-from semantle_slack_bot.models import *  # noqa: F401, F403
+from similarium.models import *  # noqa: F401, F403
 
 SQLITE_SCHEMA = "sqlite+aiosqlite:///"
 POSTGRES_SCHEMA = "postgresql+asyncpg://"

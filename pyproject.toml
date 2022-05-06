@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "semantle-slack-bot"
+name = "similarium"
 version = "0.1.0"
-description = "A Slack bot to play Semantle together as a team"
+description = "A Slack bot to play Similarium together as a team"
 authors = ["Axel <dev@absalon.is>"]
 license = "GNU GPLv3"
 

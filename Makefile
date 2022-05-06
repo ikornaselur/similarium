@@ -30,7 +30,7 @@ pyright:
 	@poetry run pyright scripts src
 
 server:
-	@poetry run python -m semantle_slack_bot.app
+	@poetry run python -m similarium.app
 
 test:
 	@LOG_LEVEL=ERROR poetry run pytest tests -vvs

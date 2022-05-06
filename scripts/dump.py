@@ -17,10 +17,10 @@ from rich.console import Console
 from rich.progress import MofNCompleteColumn, Progress, TimeElapsedColumn
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
-from semantle_slack_bot import db
-from semantle_slack_bot.config import config
-from semantle_slack_bot.models import Nearby, SimilarityRange, Word2Vec
-from semantle_slack_bot.target_words import target_words
+from similarium import db
+from similarium.config import config
+from similarium.models import Nearby, SimilarityRange, Word2Vec
+from similarium.target_words import target_words
 
 ROOT = Path(__file__).parent.parent
 

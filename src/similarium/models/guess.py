@@ -7,13 +7,13 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import relationship
 
-from semantle_slack_bot.config import config
-from semantle_slack_bot.db import Base
-from semantle_slack_bot.logging import logger
-from semantle_slack_bot.utils import timestamp_ms
+from similarium.config import config
+from similarium.db import Base
+from similarium.logging import logger
+from similarium.utils import timestamp_ms
 
 if TYPE_CHECKING:
-    from semantle_slack_bot.models import Game
+    from similarium.models import Game
 
 
 class Guess(Base):

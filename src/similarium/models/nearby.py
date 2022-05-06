@@ -5,9 +5,9 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import relationship, selectinload
 
-from semantle_slack_bot.config import config
-from semantle_slack_bot.db import Base
-from semantle_slack_bot.exceptions import NotFound
+from similarium.config import config
+from similarium.db import Base
+from similarium.exceptions import NotFound
 
 
 class Nearby(Base):

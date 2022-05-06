@@ -9,5 +9,5 @@ logging.basicConfig(
     handlers=[RichHandler(log_time_format="[%X]", markup=False)],
 )
 
-logger = logging.getLogger("semantle")
+logger = logging.getLogger("similarium")
 logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
