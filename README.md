@@ -57,6 +57,5 @@ The following words are in the test database:
 
 
 ## Attributions
-Based heavily on the
-[novalis_dt/semantle](https://gitlab.com/novalis_dt/semantle) source code by
-David Turner.
+Based heavily on the original GNU GPLv3 licensed Semantle source code by [David
+Turner](https://novalis.org/).
