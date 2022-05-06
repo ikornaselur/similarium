@@ -112,51 +112,52 @@ async def slash(ack, respond, command, client):
     logger.info(f"Received {parsed_command} command")
     channel_id = command["channel_id"]
 
-    if isinstance(parsed_command, Start):
-        # Check if there is already a game registered for the channel
-        async with db.session() as session:
-            channel = await Channel.by_id(channel_id, session=session)
-        if channel is not None:
-            logger.debug(f"Game was already registered for {channel_id=}")
-            await respond(
-                text=(
-                    ":no_entry_sign: Game is already registered for the channel. Please"
-                    ' use the "stop" command before running "start" again.'
+    match parsed_command:
+        case Start():
+            # Check if there is already a game registered for the channel
+            async with db.session() as session:
+                channel = await Channel.by_id(channel_id, session=session)
+            if channel is not None:
+                logger.debug(f"Game was already registered for {channel_id=}")
+                await respond(
+                    text=(
+                        ":no_entry_sign: Game is already registered for the channel. Please"
+                        ' use the "stop" command before running "start" again.'
+                    )
                 )
+                return
+
+            # Get user timezone to normalize the game posting to UTC+0
+            user_info = await client.users_info(user=command["user_id"])
+            user_data = user_info.data["user"]
+            timezone = pytz.timezone(user_data["tz"])
+            time = parsed_command.when.replace(tzinfo=timezone)
+
+            channel = Channel(
+                id=channel_id,
+                time=time,
             )
-            return
-
-        # Get user timezone to normalize the game posting to UTC+0
-        user_info = await client.users_info(user=command["user_id"])
-        user_data = user_info.data["user"]
-        timezone = pytz.timezone(user_data["tz"])
-        time = parsed_command.when.replace(tzinfo=timezone)
-
-        channel = Channel(
-            id=channel_id,
-            time=time,
-        )
-        logger.debug(f"Adding Channel {channel_id=}")
-        async with db.session() as session:
-            session.add(channel)
-            await session.commit()
-    elif isinstance(parsed_command, Stop):
-        async with db.session() as session:
-            channel = await Channel.by_id(channel_id, session=session)
-        if channel is None:
-            logger.debug(f"No game was registered {channel_id=}")
-            await respond(
-                text=(
-                    ":no_entry_sign: No game is registered for the channel, did you"
-                    ' mean to run "start"?'
+            logger.debug(f"Adding Channel {channel_id=}")
+            async with db.session() as session:
+                session.add(channel)
+                await session.commit()
+        case Stop():
+            async with db.session() as session:
+                channel = await Channel.by_id(channel_id, session=session)
+            if channel is None:
+                logger.debug(f"No game was registered {channel_id=}")
+                await respond(
+                    text=(
+                        ":no_entry_sign: No game is registered for the channel, did you"
+                        ' mean to run "start"?'
+                    )
                 )
-            )
-            return
-        logger.debug(f"Deleting {channel}")
-        async with db.session() as session:
-            stmt = delete(Channel).where(Channel.id == channel.id)
-            await session.execute(stmt)
-            await session.commit()
+                return
+            logger.debug(f"Deleting {channel}")
+            async with db.session() as session:
+                stmt = delete(Channel).where(Channel.id == channel.id)
+                await session.execute(stmt)
+                await session.commit()
 
     await respond(text=parsed_command.text, blocks=parsed_command.blocks)
 

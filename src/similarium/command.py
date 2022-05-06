@@ -30,22 +30,23 @@ class Start(Command):
     def when_human(self) -> str:
         when_fmt = self.when.strftime("%H:%M")
 
-        if 0 <= self.when.hour < 4:
-            return f"late night at {when_fmt}"
-        elif 4 <= self.when.hour < 8:
-            return f"in the early morning at {when_fmt}"
-        elif 8 <= self.when.hour < 12:
-            return f"in the morning at {when_fmt}"
-        elif 12 <= self.when.hour < 13:
-            return f"at noon at {when_fmt}"
-        elif 13 <= self.when.hour < 17:
-            return f"in the afternoon at {when_fmt}"
-        elif 17 <= self.when.hour < 21:
-            return f"in the evening at {when_fmt}"
-        elif 21 <= self.when.hour < 24:
-            return f"at night at {when_fmt}"
-        else:
-            return f"at {when_fmt}"
+        match self.when.hour:
+            case 0 | 1 | 2 | 3:
+                return f"late night at {when_fmt}"
+            case 4 | 5 | 6 | 7:
+                return f"in the early morning at {when_fmt}"
+            case 8 | 9 | 10 | 11:
+                return f"in the morning at {when_fmt}"
+            case 12:
+                return f"at noon at {when_fmt}"
+            case 13 | 14 | 15 | 16:
+                return f"in the afternoon at {when_fmt}"
+            case 17 | 18 | 19 | 20:
+                return f"in the evening at {when_fmt}"
+            case 21 | 22 | 23:
+                return f"at night at {when_fmt}"
+            case _:
+                return f"at {when_fmt}"
 
     @property
     def text(self) -> str:
@@ -119,22 +120,23 @@ def parse_command(text: str) -> Command:
     parts = text.split(" ")
     subcommand = parts[0]
 
-    if subcommand == "start":
-        if len(parts) < 2:
-            raise ParseException(
-                ":no_entry_sign: Time missing from start command :no_entry_sign:"
-            )
-        # Try to parse the time
-        try:
-            time = parser.parse(parts[1]).time()
-        except parser.ParserError:
-            raise ParseException(
-                "Unable to parse time. Try tomething like 9am or 13:00"
-            )
-        return Start(when=time)
-    elif subcommand == "stop":
-        return Stop()
-    elif subcommand == "help":
-        return Help()
-    else:
-        raise ParseException(":no_entry_sign: Unknown command :no_entry_sign:")
+    match subcommand:
+        case "start":
+            if len(parts) < 2:
+                raise ParseException(
+                    ":no_entry_sign: Time missing from start command :no_entry_sign:"
+                )
+            # Try to parse the time
+            try:
+                time = parser.parse(parts[1]).time()
+            except parser.ParserError:
+                raise ParseException(
+                    "Unable to parse time. Try tomething like 9am or 13:00"
+                )
+            return Start(when=time)
+        case "stop":
+            return Stop()
+        case "help":
+            return Help()
+        case _:
+            raise ParseException(":no_entry_sign: Unknown command :no_entry_sign:")
