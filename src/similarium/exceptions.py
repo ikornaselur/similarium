@@ -10,6 +10,18 @@ class ParseException(SimilariumException):
     pass
 
 
+class SlackException(SimilariumException):
+    pass
+
+
+class ChannelNotFound(SlackException):
+    pass
+
+
+class NotInChannel(SlackException):
+    pass
+
+
 class DatabaseException(SimilariumException):
     pass
 

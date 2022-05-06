@@ -65,6 +65,15 @@ class Stop(Command):
         return "<Stop>"
 
 
+class Manual(Command):
+    @property
+    def text(self) -> str:
+        return ""
+
+    def __repr__(self) -> str:
+        return "<Manual>"
+
+
 class Help(Command):
     @property
     def text(self) -> str:
@@ -88,7 +97,8 @@ class Help(Command):
                         "*Start a daily puzzle at a specific time*\nStart posting a"
                         " daily puzzle at the provided time on the current channel. The"
                         ' time can be something like "9am" or "13:00" for example.\nThe'
-                        " time will be based on your timezone."
+                        " time will be based on your timezone.\nThe puzzle will be"
+                        " posted at the start of the hour."
                     ),
                 },
                 "fields": [
@@ -138,5 +148,7 @@ def parse_command(text: str) -> Command:
             return Stop()
         case "help":
             return Help()
+        case "manual":
+            return Manual()
         case _:
             raise ParseException(":no_entry_sign: Unknown command :no_entry_sign:")

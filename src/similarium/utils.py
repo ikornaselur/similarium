@@ -142,3 +142,11 @@ def timestamp_ms() -> int:
 def get_header_text(puzzle_number: int, puzzle_date: str) -> str:
     """Generate header text for a Slack message"""
     return f"{puzzle_date} - Puzzle number {puzzle_number}"
+
+
+def get_seconds_left_of_hour() -> float:
+    """Calculate how many seconds left of the current hour"""
+    now = dt.datetime.now()
+    next_hour = (now + dt.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+
+    return (next_hour - now).total_seconds()
