@@ -19,7 +19,7 @@ async def hourly_game_creator() -> None:
         logger.debug(f"Hourly task sleeping for {sleep_time:.0f} seconds")
         await asyncio.sleep(sleep_time)
 
-        current_hour = dt.datetime.now().hour
+        current_hour = dt.datetime.now(dt.timezone.utc).hour
 
         async with db.session() as session:
             channels = await Channel.by_hour(current_hour, session=session)

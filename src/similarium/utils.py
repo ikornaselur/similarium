@@ -146,7 +146,7 @@ def get_header_text(puzzle_number: int, puzzle_date: str) -> str:
 
 def get_seconds_left_of_hour() -> float:
     """Calculate how many seconds left of the current hour"""
-    now = dt.datetime.now()
+    now = dt.datetime.now(dt.timezone.utc)
     next_hour = (now + dt.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
 
     return (next_hour - now).total_seconds()
