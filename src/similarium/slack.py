@@ -234,19 +234,30 @@ async def get_thread_blocks(session: AsyncSession, game: Game) -> list:
         slack_game.header,
         await slack_game.finished(session=session) if not game.active else None,
         slack_game.divider,
-        slack_game.markdown_section("*Latest guesses*"),
-        *[
-            slack_game.guess_context(guess, base_id="latest")
-            for guess in await game.latest_guesses(
-                LATEST_GUESSES_TO_SHOW, session=session
-            )
-        ],
-        slack_game.markdown_section("*Top guesses*"),
-        *[
-            slack_game.guess_context(guess, base_id="top")
-            for guess in await game.top_guesses(TOP_GUESSES_TO_SHOW, session=session)
-        ],
-        slack_game.input if game.active else None,
     ]
+    if game.active:
+        blocks.extend(
+            [
+                slack_game.markdown_section("*Latest guesses*"),
+                *[
+                    slack_game.guess_context(guess, base_id="latest")
+                    for guess in await game.latest_guesses(
+                        LATEST_GUESSES_TO_SHOW, session=session
+                    )
+                ],
+            ]
+        )
+    blocks.extend(
+        [
+            slack_game.markdown_section("*Top guesses*"),
+            *[
+                slack_game.guess_context(guess, base_id="top")
+                for guess in await game.top_guesses(
+                    TOP_GUESSES_TO_SHOW, session=session
+                )
+            ],
+            slack_game.input if game.active else None,
+        ]
+    )
 
     return [b for b in blocks if b is not None]
