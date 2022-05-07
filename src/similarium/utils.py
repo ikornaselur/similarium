@@ -7,7 +7,7 @@ from similarium.target_words import target_words
 
 Vector = list[float]
 
-BASE_DATE = dt.datetime(2022, 4, 20, tzinfo=dt.timezone.utc)
+BASE_DATE = dt.datetime(2022, 5, 6, tzinfo=dt.timezone.utc)
 
 
 def dot(A: Vector, B: Vector) -> float:

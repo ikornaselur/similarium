@@ -139,7 +139,7 @@ class SlackGame:
             or (top_guess := top_guesses[0]).word != self._game.secret
         ):
             text_lines = [
-                ":cry: *No one found the word!",
+                ":cry: *No one found the word!*",
                 f"The secret word of the day was: *{self._game.secret}*",
             ]
             if top_guess is not None:
