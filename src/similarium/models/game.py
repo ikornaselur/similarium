@@ -30,7 +30,7 @@ class Game(Base):
     secret = sa.Column(sa.Text, nullable=False)
 
     channel = relationship("Channel", backref="games", lazy="joined")
-    guesses = relationship("Guess", backref="game", lazy="joined")
+    guesses = relationship("Guess", back_populates="game", lazy="joined")
     similarity_range = relationship(
         "SimilarityRange", primaryjoin="foreign(Game.secret) == SimilarityRange.word"
     )
@@ -174,6 +174,7 @@ class Game(Base):
             select(Guess)
             .where(Guess.game_id == self.id)
             .order_by(Guess.similarity.desc())
+            .options(selectinload(Guess.game))
             .limit(n)
         )
         result = await session.execute(stmt)
@@ -186,6 +187,7 @@ class Game(Base):
             select(Guess)
             .where(Guess.game_id == self.id)
             .order_by(Guess.updated.desc())
+            .options(selectinload(Guess.game))
             .limit(n)
         )
         result = await session.execute(stmt)

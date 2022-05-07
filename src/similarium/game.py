@@ -62,13 +62,12 @@ async def start_game(channel_id: str):
 
 
 async def update_game(game: Game) -> None:
-    async with db.session() as session:
-        await web_client.chat_update(
-            channel=game.channel_id,
-            ts=game.thread_ts,
-            text="Update to todays game",
-            blocks=await get_thread_blocks(session, game),
-        )
+    await web_client.chat_update(
+        channel=game.channel_id,
+        ts=game.thread_ts,
+        text="Update to todays game",
+        blocks=await get_thread_blocks(game.id),
+    )
 
 
 async def end_game(channel_id: str) -> None:
@@ -86,5 +85,5 @@ async def end_game(channel_id: str) -> None:
                 channel=game.channel_id,
                 ts=game.thread_ts,
                 text="Update to todays game",
-                blocks=await get_thread_blocks(session, game),
+                blocks=await get_thread_blocks(game),
             )
