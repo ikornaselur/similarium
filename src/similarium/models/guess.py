@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Optional
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, selectinload
 
 from similarium.config import config
 from similarium.db import Base
@@ -21,6 +21,7 @@ class Guess(Base):
 
     id = sa.Column(sa.Integer, primary_key=True)
     game_id = sa.Column(sa.Integer, sa.ForeignKey("game.id"), nullable=False)
+    game = relationship("Game", back_populates="guesses", lazy="joined")
 
     # Milliseconds since start of previous day UTC, only used for ordering
     # guesses in a game. Previous day is used to deal with time zones
@@ -69,9 +70,13 @@ class Guess(Base):
         cls, *, session: AsyncSession, word: str, game_id: int
     ) -> Optional[Guess]:
         logger.debug(f"Getting guess {word=} {game_id=}")
-        stmt = select(cls).where(
-            cls.word == word,
-            cls.game_id == game_id,
+        stmt = (
+            select(cls)
+            .where(
+                cls.word == word,
+                cls.game_id == game_id,
+            )
+            .options(selectinload(cls.game))
         )
 
         result = await session.execute(stmt)

@@ -19,7 +19,7 @@ class SimilarityRange(Base):
 
     @classmethod
     async def get(
-        cls, *, session: AsyncSession, word: str
+        cls, word: str, /, *, session: AsyncSession
     ) -> Optional[SimilarityRange]:
         stmt = select(cls).where(cls.word == word)
         result = await session.execute(stmt)

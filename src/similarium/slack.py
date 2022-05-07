@@ -6,6 +6,7 @@ from slack_bolt.app.async_app import AsyncApp
 from slack_sdk.web.async_client import AsyncWebClient
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
+from similarium import db
 from similarium.config import config
 from similarium.models import Game, Guess
 from similarium.utils import get_custom_progress_bar, get_header_text
@@ -187,6 +188,10 @@ class SlackGame:
 
 def _closeness(guess: Guess) -> str:
     similarity_count = config.rules.similarity_count
+    # Similarity on the guess is stored as a value up to 100, while similarity
+    # range is up to 1.0
+    min_similarity = guess.game.similarity_range.rest * 100
+
     if guess.percentile:
         if guess.percentile < 10:
             percentile = f"{SPACE * 7}{guess.percentile}"
@@ -200,14 +205,20 @@ def _closeness(guess: Guess) -> str:
             guess.percentile, similarity_count, width=6
         )
         return f"{progress_bar} {percentile}/{similarity_count}"
-    return f"{get_custom_progress_bar(0, similarity_count, width=6)}{SPACE * 14}cold"
+    elif guess.similarity > min_similarity:
+        # We have a ???? word
+        similarity = "????"
+    else:
+        similarity = "cold"
+
+    progress_bar = get_custom_progress_bar(0, similarity_count, width=6)
+    return f"{progress_bar}{SPACE * 14}{similarity}"
 
 
 def _idx(guess: Guess) -> str:
     # Magic!
     # Add 6 spaces for idx < 10, 4 spaces for idx < 100, else 2 spaces
-    # TODO: over 100 seems to not work
-    postfix = max(2 - int(math.log10(guess.idx)), 1) * (SPACE * 2)
+    postfix = max(3 - int(math.log10(guess.idx)), 1) * (SPACE * 2)
 
     return f"{guess.idx}.{postfix}"
 
@@ -216,48 +227,54 @@ def _similarity(guess: Guess) -> str:
     prefix = ""
     if guess.similarity >= 0:
         # Account for negative symbol
-        prefix += SPACE * 2
+        prefix += SPACE * 1
     if abs(guess.similarity) < 10:
         # Account for small number
         prefix += SPACE * 2
 
-    return f"_{prefix}{guess.similarity:.02f}_       "
+    return f"{prefix}_{guess.similarity:.02f}_{SPACE * 7}"
 
 
 def _word(guess: Guess) -> str:
     return f"*{guess.word}*"
 
 
-async def get_thread_blocks(session: AsyncSession, game: Game) -> list:
-    slack_game = SlackGame(game)
-    blocks = [
-        slack_game.header,
-        await slack_game.finished(session=session) if not game.active else None,
-        slack_game.divider,
-    ]
-    if game.active:
+async def get_thread_blocks(game_id: int) -> list:
+    async with db.session() as session:
+        game = await Game.by_id(game_id, session=session)
+        if game is None:
+            raise Exception("???")
+
+        slack_game = SlackGame(game)
+
+        blocks = [
+            slack_game.header,
+            await slack_game.finished(session=session) if not game.active else None,
+            slack_game.divider,
+        ]
+        if game.active:
+            blocks.extend(
+                [
+                    slack_game.markdown_section("*Latest guesses*"),
+                    *[
+                        slack_game.guess_context(guess, base_id="latest")
+                        for guess in await game.latest_guesses(
+                            LATEST_GUESSES_TO_SHOW, session=session
+                        )
+                    ],
+                ]
+            )
         blocks.extend(
             [
-                slack_game.markdown_section("*Latest guesses*"),
+                slack_game.markdown_section("*Top guesses*"),
                 *[
-                    slack_game.guess_context(guess, base_id="latest")
-                    for guess in await game.latest_guesses(
-                        LATEST_GUESSES_TO_SHOW, session=session
+                    slack_game.guess_context(guess, base_id="top")
+                    for guess in await game.top_guesses(
+                        TOP_GUESSES_TO_SHOW, session=session
                     )
                 ],
+                slack_game.input if game.active else None,
             ]
         )
-    blocks.extend(
-        [
-            slack_game.markdown_section("*Top guesses*"),
-            *[
-                slack_game.guess_context(guess, base_id="top")
-                for guess in await game.top_guesses(
-                    TOP_GUESSES_TO_SHOW, session=session
-                )
-            ],
-            slack_game.input if game.active else None,
-        ]
-    )
 
-    return [b for b in blocks if b is not None]
+        return [b for b in blocks if b is not None]
