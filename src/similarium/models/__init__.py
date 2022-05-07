@@ -1,4 +1,5 @@
 # flake8: noqa: F401
+from .channel import Channel
 from .game import Game
 from .guess import Guess
 from .nearby import Nearby

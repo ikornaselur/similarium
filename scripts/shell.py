@@ -1,6 +1,10 @@
+# pyright: reportWildcardImportFromLibrary=false
 # flake8: noqa: F401 F403
-from IPython import embed
+import datetime as dt
 
+from IPython import embed
+import pytz
+import sqlalchemy as sa
 from sqlalchemy.future import select
 
 from similarium import db
@@ -16,6 +20,10 @@ banner1 = """
 
 Preloaded imports:
 
+    import datetime as dt
+
+    import pytz
+    import sqlalchemy as sa
     from sqlalchemy.future import select
 
     from similarium import db

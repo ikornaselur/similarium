@@ -22,13 +22,14 @@ class Game(Base):
     __tablename__ = "game"
 
     id = sa.Column(sa.Integer, primary_key=True)
-    channel_id = sa.Column(sa.Text, nullable=False)
+    channel_id = sa.Column(sa.Text, sa.ForeignKey("channel.id"), nullable=False)
     thread_ts = sa.Column(sa.Text, nullable=False)
     puzzle_number = sa.Column(sa.Integer, nullable=False)
     date = sa.Column(sa.Text, nullable=False)
     active = sa.Column(sa.Boolean, nullable=False)
     secret = sa.Column(sa.Text, nullable=False)
 
+    channel = relationship("Channel", backref="games", lazy="joined")
     guesses = relationship("Guess", backref="game", lazy="joined")
     similarity_range = relationship(
         "SimilarityRange", primaryjoin="foreign(Game.secret) == SimilarityRange.word"
@@ -68,9 +69,7 @@ class Game(Base):
         puzzle_number: int,
         session: AsyncSession,
     ) -> Optional[Game]:
-        logger.debug(
-            f"Getting or creating Game: {channel_id=} {thread_ts=} {puzzle_number=}"
-        )
+        logger.debug(f"Getting Game: {channel_id=} {thread_ts=} {puzzle_number=}")
         stmt = (
             select(cls)
             .where(
@@ -85,6 +84,21 @@ class Game(Base):
         result = await session.execute(stmt)
 
         return result.scalars().one_or_none()
+
+    @classmethod
+    async def get_active_in_channel(
+        cls, channel_id: str, /, *, session: AsyncSession
+    ) -> list[Game]:
+        stmt = (
+            select(cls)
+            .where(cls.channel_id == channel_id, cls.active)
+            .options(selectinload(cls.guesses))
+            .options(selectinload(cls.similarity_range))
+        )
+
+        result = await session.execute(stmt)
+
+        return result.scalars().all()
 
     @classmethod
     async def by_id(cls, game_id: int, /, *, session: AsyncSession) -> Optional[Game]:

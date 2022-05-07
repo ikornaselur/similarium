@@ -7,7 +7,7 @@ from similarium.target_words import target_words
 
 Vector = list[float]
 
-BASE_DATE = dt.datetime(2022, 4, 20, tzinfo=dt.timezone.utc)
+BASE_DATE = dt.datetime(2022, 5, 6, tzinfo=dt.timezone.utc)
 
 
 def dot(A: Vector, B: Vector) -> float:
@@ -142,3 +142,11 @@ def timestamp_ms() -> int:
 def get_header_text(puzzle_number: int, puzzle_date: str) -> str:
     """Generate header text for a Slack message"""
     return f"{puzzle_date} - Puzzle number {puzzle_number}"
+
+
+def get_seconds_left_of_hour() -> float:
+    """Calculate how many seconds left of the current hour"""
+    now = dt.datetime.now(dt.timezone.utc)
+    next_hour = (now + dt.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+
+    return (next_hour - now).total_seconds()
