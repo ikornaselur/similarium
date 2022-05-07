@@ -17,7 +17,6 @@ postgres:
 		--name postgres \
 		postgres:14
 
-
 clean:
 	rm word2vec.db*
 	rm hints.json

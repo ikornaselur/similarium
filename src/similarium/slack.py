@@ -206,8 +206,7 @@ def _closeness(guess: Guess) -> str:
 def _idx(guess: Guess) -> str:
     # Magic!
     # Add 6 spaces for idx < 10, 4 spaces for idx < 100, else 2 spaces
-    # TODO: over 100 seems to not work
-    postfix = max(2 - int(math.log10(guess.idx)), 1) * (SPACE * 2)
+    postfix = max(3 - int(math.log10(guess.idx)), 1) * (SPACE * 2)
 
     return f"{guess.idx}.{postfix}"
 
@@ -216,12 +215,12 @@ def _similarity(guess: Guess) -> str:
     prefix = ""
     if guess.similarity >= 0:
         # Account for negative symbol
-        prefix += SPACE * 2
+        prefix += SPACE * 1
     if abs(guess.similarity) < 10:
         # Account for small number
         prefix += SPACE * 2
 
-    return f"_{prefix}{guess.similarity:.02f}_       "
+    return f"{prefix}_{guess.similarity:.02f}_{SPACE * 7}"
 
 
 def _word(guess: Guess) -> str:
