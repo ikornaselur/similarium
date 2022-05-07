@@ -32,7 +32,9 @@ server:
 	@poetry run python -m similarium.app
 
 test:
-	@poetry run pytest tests -vvs
+	@SLACK_BOT_TOKEN=xoxb-123123 \
+		SLACK_APP_TOKEN=xapp-456456 \
+		poetry run pytest tests -vvs
 
 shell:
 	@poetry run python scripts/shell.py
