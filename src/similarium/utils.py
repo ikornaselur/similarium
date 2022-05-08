@@ -27,7 +27,8 @@ def get_similarity(vec1: list[float], vec2: list[float]) -> float:
 
 
 PARTIAL_EMOJIS = 8
-P = [f":p{i}:" for i in range(0, PARTIAL_EMOJIS + 1)]
+# P = [f":p{i}:" for i in range(0, PARTIAL_EMOJIS + 1)]
+P = ["", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"]
 
 
 def get_custom_progress_bar(amount: int, total: int, width: int) -> str:
