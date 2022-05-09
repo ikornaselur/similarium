@@ -1,10 +1,13 @@
 import asyncio
 import datetime as dt
+import os
 import re
 from asyncio.exceptions import CancelledError
 
 import pytz
+import sentry_sdk
 from aiohttp import web
+from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from slack_bolt.app.async_server import AsyncSlackAppServer
 from sqlalchemy.sql.expression import delete
 
@@ -16,6 +19,7 @@ from similarium.exceptions import (
     NotFound,
     NotInChannel,
     ParseException,
+    init_exception_handler,
 )
 from similarium.game import start_game, update_game
 from similarium.logging import configure_logger, logger, web_logger
@@ -25,6 +29,11 @@ from similarium.tasks import hourly_game_creator
 from similarium.utils import get_puzzle_number
 
 REGEX = re.compile(r"^(?P<guess>[A-Za-z]+)$")
+
+sentry_sdk.init(
+    dsn=os.environ["SENTRY_DSN"],
+    integrations=[AioHttpIntegration()],
+)
 
 
 @app.action("submit-guess")
@@ -183,6 +192,8 @@ async def cleanup_task(app):
 
 def main() -> None:
     configure_logger()
+    loop = asyncio.new_event_loop()
+    init_exception_handler(loop)
 
     server = AsyncSlackAppServer(
         port=3000,
@@ -194,7 +205,11 @@ def main() -> None:
     server.web_app.on_cleanup.append(cleanup_task)
 
     web.run_app(
-        server.web_app, host=server.host, port=server.port, access_log=web_logger
+        server.web_app,
+        host=server.host,
+        port=server.port,
+        access_log=web_logger,
+        loop=loop,
     )
 
 

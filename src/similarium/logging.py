@@ -6,7 +6,7 @@ from rich.logging import RichHandler
 logger = logging.getLogger("similarium")
 web_logger = logging.getLogger("similarium.web")
 logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
-web_logger.setLevel(os.environ.get("LOG_LEVEL", "WARNING"))
+web_logger.setLevel(os.environ.get("WEB_LOG_LEVEL", "WARNING"))
 
 
 def configure_logger() -> None:
