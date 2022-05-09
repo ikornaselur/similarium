@@ -1,4 +1,5 @@
 import asyncio
+import datetime as dt
 import re
 from asyncio.exceptions import CancelledError
 
@@ -106,8 +107,24 @@ async def slash(ack, respond, command, client):
             # Get user timezone to normalize the game posting to UTC+0
             user_info = await client.users_info(user=command["user_id"])
             user_data = user_info.data["user"]
+            # We're going to go by today to try to deal with daylight savings
+            # TODO: Properly handle DST
             timezone = pytz.timezone(user_data["tz"])
-            time = parsed_command.when.replace(tzinfo=timezone)
+            utc = pytz.timezone("UTC")
+
+            datetime = utc.normalize(
+                dt.datetime.now(timezone).replace(
+                    hour=parsed_command.when.hour,
+                    minute=0,
+                    second=0,
+                    microsecond=0,
+                )
+            )
+            time = datetime.time()
+
+            logger.debug(
+                f"User {parsed_command.when=} {timezone=} converted to {time=}"
+            )
 
             channel = Channel(
                 id=channel_id,
