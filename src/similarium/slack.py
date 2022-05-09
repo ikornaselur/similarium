@@ -178,7 +178,7 @@ class SlackGame:
                 {
                     "type": "image",
                     "image_url": guess.user.profile_photo,
-                    "alt_text": "profile",
+                    "alt_text": guess.user.username,
                 },
                 {"type": "mrkdwn", "text": closeness},
                 {"type": "mrkdwn", "text": guess_info},
