@@ -85,5 +85,5 @@ async def end_game(channel_id: str) -> None:
                 channel=game.channel_id,
                 ts=game.thread_ts,
                 text="Update to todays game",
-                blocks=await get_thread_blocks(game),
+                blocks=await get_thread_blocks(game.id),
             )
