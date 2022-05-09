@@ -1,9 +1,11 @@
 import asyncio
-import os
+import datetime as dt
 import re
+from asyncio.exceptions import CancelledError
 
 import pytz
-from slack_bolt.adapter.socket_mode.aiohttp import AsyncSocketModeHandler
+from aiohttp import web
+from slack_bolt.app.async_server import AsyncSlackAppServer
 from sqlalchemy.sql.expression import delete
 
 from similarium import db
@@ -16,7 +18,7 @@ from similarium.exceptions import (
     ParseException,
 )
 from similarium.game import start_game, update_game
-from similarium.logging import configure_logger, logger
+from similarium.logging import configure_logger, logger, web_logger
 from similarium.models import Channel, Game, User
 from similarium.slack import app
 from similarium.tasks import hourly_game_creator
@@ -85,6 +87,7 @@ async def slash(ack, respond, command, client):
         return
     logger.info(f"Received {parsed_command} command")
     channel_id = command["channel_id"]
+    team_id = command["team_id"]
 
     match parsed_command:
         case Start():
@@ -104,11 +107,28 @@ async def slash(ack, respond, command, client):
             # Get user timezone to normalize the game posting to UTC+0
             user_info = await client.users_info(user=command["user_id"])
             user_data = user_info.data["user"]
+            # We're going to go by today to try to deal with daylight savings
+            # TODO: Properly handle DST
             timezone = pytz.timezone(user_data["tz"])
-            time = parsed_command.when.replace(tzinfo=timezone)
+            utc = pytz.timezone("UTC")
+
+            datetime = utc.normalize(
+                dt.datetime.now(timezone).replace(
+                    hour=parsed_command.when.hour,
+                    minute=0,
+                    second=0,
+                    microsecond=0,
+                )
+            )
+            time = datetime.time()
+
+            logger.debug(
+                f"User {parsed_command.when=} {timezone=} converted to {time=}"
+            )
 
             channel = Channel(
                 id=channel_id,
+                team_id=team_id,
                 hour=time.hour,
             )
             logger.debug(f"Adding Channel {channel_id=}")
@@ -147,15 +167,36 @@ async def slash(ack, respond, command, client):
     await respond(text=parsed_command.text, blocks=parsed_command.blocks)
 
 
-async def main() -> None:
+async def startup_task(app):
+    logger.debug("Starting background task")
+    app["background_task"] = asyncio.create_task(hourly_game_creator())
+
+
+async def cleanup_task(app):
+    logger.debug("Cleanup background task")
+    app["background_task"].cancel()
+    try:
+        await app["background_task"]
+    except CancelledError:
+        pass
+
+
+def main() -> None:
     configure_logger()
 
-    # Start the hourly task
-    asyncio.create_task(hourly_game_creator())
+    server = AsyncSlackAppServer(
+        port=3000,
+        path="/slack/events",
+        app=app,
+        host="0.0.0.0",
+    )
+    server.web_app.on_startup.append(startup_task)
+    server.web_app.on_cleanup.append(cleanup_task)
 
-    handler = AsyncSocketModeHandler(app, os.environ["SLACK_APP_TOKEN"])
-    await handler.start_async()
+    web.run_app(
+        server.web_app, host=server.host, port=server.port, access_log=web_logger
+    )
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

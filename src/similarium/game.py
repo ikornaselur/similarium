@@ -3,8 +3,8 @@ from slack_sdk.errors import SlackApiError
 from similarium import db
 from similarium.exceptions import ChannelNotFound, NotInChannel
 from similarium.logging import logger
-from similarium.models import Game
-from similarium.slack import get_thread_blocks, web_client
+from similarium.models import Channel, Game
+from similarium.slack import app, get_bot_token_for_team, get_thread_blocks
 from similarium.utils import get_header_text, get_puzzle_date, get_puzzle_number
 
 
@@ -13,8 +13,16 @@ async def start_game(channel_id: str):
     puzzle_date = get_puzzle_date(puzzle_number)
     header_text = get_header_text(puzzle_number, puzzle_date)
 
+    async with db.session() as session:
+        channel = await Channel.by_id(channel_id, session=session)
+
+    if channel is None:
+        # XXX
+        raise Exception("Need to subscribe to a game before manual trigger")
+
     try:
-        resp = await web_client.chat_postMessage(
+        resp = await app.client.chat_postMessage(
+            token=get_bot_token_for_team(channel.team_id),
             text=header_text,
             channel=channel_id,
             blocks=[
@@ -41,6 +49,7 @@ async def start_game(channel_id: str):
         )
     except SlackApiError as e:
         response = e.response.data
+        logger.error("Error posting game", exc_info=e)
         match response.get("error"):
             case "channel_not_found":
                 # Likely private channel
@@ -48,7 +57,6 @@ async def start_game(channel_id: str):
             case "not_in_channel":
                 # Needs to be invited
                 raise NotInChannel()
-        logger.error("Error posting game", exc_info=e)
         return
     game = Game.new(
         channel_id=channel_id,
@@ -62,7 +70,8 @@ async def start_game(channel_id: str):
 
 
 async def update_game(game: Game) -> None:
-    await web_client.chat_update(
+    await app.client.chat_update(
+        token=get_bot_token_for_team(game.channel.team_id),
         channel=game.channel_id,
         ts=game.thread_ts,
         text="Update to todays game",
@@ -81,7 +90,8 @@ async def end_game(channel_id: str) -> None:
             game.active = False
             await session.commit()
 
-            await web_client.chat_update(
+            await app.client.chat_update(
+                token=get_bot_token_for_team(game.channel.team_id),
                 channel=game.channel_id,
                 ts=game.thread_ts,
                 text="Update to todays game",

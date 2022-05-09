@@ -13,6 +13,7 @@ class Channel(Base):
     __tablename__ = "channel"
 
     id = sa.Column(sa.Text, primary_key=True)
+    team_id = sa.Column(sa.Text, nullable=False)
     # The hour to post the daily puzzle, on UTC+0
     hour = sa.Column(sa.Integer, nullable=False)
 
