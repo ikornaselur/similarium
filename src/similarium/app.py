@@ -86,6 +86,7 @@ async def slash(ack, respond, command, client):
         return
     logger.info(f"Received {parsed_command} command")
     channel_id = command["channel_id"]
+    team_id = command["team_id"]
 
     match parsed_command:
         case Start():
@@ -110,6 +111,7 @@ async def slash(ack, respond, command, client):
 
             channel = Channel(
                 id=channel_id,
+                team_id=team_id,
                 hour=time.hour,
             )
             logger.debug(f"Adding Channel {channel_id=}")

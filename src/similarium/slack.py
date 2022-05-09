@@ -6,7 +6,6 @@ from slack_bolt.app.async_app import AsyncApp
 from slack_bolt.oauth.async_oauth_settings import AsyncOAuthSettings
 from slack_sdk.oauth.installation_store.file import FileInstallationStore
 from slack_sdk.oauth.state_store.file import FileOAuthStateStore
-from slack_sdk.web.async_client import AsyncWebClient
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from similarium import db
@@ -18,20 +17,35 @@ SPACE = " "
 TOP_GUESSES_TO_SHOW = 15
 LATEST_GUESSES_TO_SHOW = 3
 
+installation_store = FileInstallationStore(base_dir="./data/installations")
 oauth_settings = AsyncOAuthSettings(
     client_id=os.environ["SLACK_CLIENT_ID"],
     client_secret=os.environ["SLACK_CLIENT_SECRET"],
     scopes=["commands", "users:read", "chat:write"],
-    installation_store=FileInstallationStore(base_dir="./data/installations"),
+    installation_store=installation_store,
     state_store=FileOAuthStateStore(expiration_seconds=600, base_dir="./data/states"),
 )
 
 app = AsyncApp(
-    token=os.environ["SLACK_BOT_TOKEN"],
     signing_secret=os.environ["SLACK_SIGNING_SECRET"],
+    installation_store=installation_store,
     oauth_settings=oauth_settings,
 )
-web_client = AsyncWebClient(token=os.environ["SLACK_BOT_TOKEN"])
+
+
+def get_bot_token_for_team(team_id: str) -> str:
+    installation = installation_store.find_installation(
+        enterprise_id=None,
+        team_id=team_id,
+    )
+    if installation is None:
+        # XXX
+        raise Exception("Unable to find installation")
+
+    if installation.bot_token is None:
+        raise Exception("No bot_token on installation")
+
+    return installation.bot_token
 
 
 class TextBlock(TypedDict):
