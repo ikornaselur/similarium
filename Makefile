@@ -32,8 +32,10 @@ server:
 	@poetry run python -m similarium.app
 
 test:
-	@SLACK_BOT_TOKEN=xoxb-123123 \
-		SLACK_APP_TOKEN=xapp-456456 \
+	@SLACK_APP_TOKEN=xapp-456456 \
+		SLACK_CLIENT_ID=123 \
+		SLACK_CLIENT_SECRET=456 \
+		SLACK_SIGNING_SECRET=789 \
 		poetry run pytest tests -vvs
 
 shell:
