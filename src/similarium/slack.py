@@ -3,6 +3,9 @@ import os
 from typing import Literal, Optional, TypedDict
 
 from slack_bolt.app.async_app import AsyncApp
+from slack_bolt.oauth.async_oauth_settings import AsyncOAuthSettings
+from slack_sdk.oauth.installation_store.file import FileInstallationStore
+from slack_sdk.oauth.state_store.file import FileOAuthStateStore
 from slack_sdk.web.async_client import AsyncWebClient
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
@@ -15,7 +18,19 @@ SPACE = " "
 TOP_GUESSES_TO_SHOW = 15
 LATEST_GUESSES_TO_SHOW = 3
 
-app = AsyncApp(token=os.environ["SLACK_BOT_TOKEN"])
+oauth_settings = AsyncOAuthSettings(
+    client_id=os.environ["SLACK_CLIENT_ID"],
+    client_secret=os.environ["SLACK_CLIENT_SECRET"],
+    scopes=["commands", "users:read", "chat:write"],
+    installation_store=FileInstallationStore(base_dir="./data/installations"),
+    state_store=FileOAuthStateStore(expiration_seconds=600, base_dir="./data/states"),
+)
+
+app = AsyncApp(
+    token=os.environ["SLACK_BOT_TOKEN"],
+    signing_secret=os.environ["SLACK_SIGNING_SECRET"],
+    oauth_settings=oauth_settings,
+)
 web_client = AsyncWebClient(token=os.environ["SLACK_BOT_TOKEN"])
 
 

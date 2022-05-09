@@ -1,9 +1,10 @@
 import asyncio
-import os
 import re
+from asyncio.exceptions import CancelledError
 
 import pytz
-from slack_bolt.adapter.socket_mode.aiohttp import AsyncSocketModeHandler
+from aiohttp import web
+from slack_bolt.app.async_server import AsyncSlackAppServer
 from sqlalchemy.sql.expression import delete
 
 from similarium import db
@@ -16,7 +17,7 @@ from similarium.exceptions import (
     ParseException,
 )
 from similarium.game import start_game, update_game
-from similarium.logging import configure_logger, logger
+from similarium.logging import configure_logger, logger, web_logger
 from similarium.models import Channel, Game, User
 from similarium.slack import app
 from similarium.tasks import hourly_game_creator
@@ -147,15 +148,36 @@ async def slash(ack, respond, command, client):
     await respond(text=parsed_command.text, blocks=parsed_command.blocks)
 
 
-async def main() -> None:
+async def startup_task(app):
+    logger.debug("Starting background task")
+    app["background_task"] = asyncio.create_task(hourly_game_creator())
+
+
+async def cleanup_task(app):
+    logger.debug("Cleanup background task")
+    app["background_task"].cancel()
+    try:
+        await app["background_task"]
+    except CancelledError:
+        pass
+
+
+def main() -> None:
     configure_logger()
 
-    # Start the hourly task
-    asyncio.create_task(hourly_game_creator())
+    server = AsyncSlackAppServer(
+        port=3000,
+        path="/slack/events",
+        app=app,
+        host="0.0.0.0",
+    )
+    server.web_app.on_startup.append(startup_task)
+    server.web_app.on_cleanup.append(cleanup_task)
 
-    handler = AsyncSocketModeHandler(app, os.environ["SLACK_APP_TOKEN"])
-    await handler.start_async()
+    web.run_app(
+        server.web_app, host=server.host, port=server.port, access_log=web_logger
+    )
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
