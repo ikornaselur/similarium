@@ -188,7 +188,9 @@ class SlackGame:
 
         return self.markdown_section(text=text)
 
-    def guess_context(self, guess: Guess, base_id: str) -> GuessContextBlock:
+    def guess_context(
+        self, guess: Guess, base_id: str, latest_guess: bool = False
+    ) -> GuessContextBlock:
         closeness = _closeness(guess)
 
         if guess.percentile == config.rules.similarity_count:
@@ -200,14 +202,19 @@ class SlackGame:
         else:
             guess_info = f"{_idx(guess)}{_similarity(guess)}{_word(guess)}"
 
+        if latest_guess:
+            user = guess.latest_guess_user
+        else:
+            user = guess.user
+
         return {
             "type": "context",
             "block_id": f"guess-{base_id}-{guess.word}",
             "elements": (
                 {
                     "type": "image",
-                    "image_url": guess.user.profile_photo,
-                    "alt_text": guess.user.username,
+                    "image_url": user.profile_photo,
+                    "alt_text": user.username,
                 },
                 {"type": "mrkdwn", "text": closeness},
                 {"type": "mrkdwn", "text": guess_info},

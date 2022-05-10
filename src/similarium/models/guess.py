@@ -65,6 +65,7 @@ class Guess(Base):
             game_id=game.id,
             updated=timestamp_ms(),
             user_id=user_id,
+            latest_guess_user_id=user_id,
             word=word,
             percentile=percentile,
             similarity=similarity,

@@ -130,6 +130,7 @@ class Game(Base):
         if guess is not None:
             logger.debug(f"Guess has already been made {guess=}")
             guess.updated = timestamp_ms()  # type: ignore
+            guess.latest_guess_user_id = user_id  # type: ignore
             return guess
 
         try:
