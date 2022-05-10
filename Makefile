@@ -1,13 +1,14 @@
 ########
 # Data #
 ########
-all: wordlists create_db_tables prepare_data
+all: wordlists init_db prepare_data
 
 wordlists:
 	@cd scripts && ./download-wordlists.sh
 
-create_db_tables:
-	@poetry run python scripts/create_db.py
+init_db:
+	@poetry run alembic downgrade base
+	@poetry run alembic upgrade head
 
 prepare_data:
 	@poetry run python scripts/dump.py
@@ -55,8 +56,6 @@ upgrade:
 	@poetry run alembic upgrade head
 
 migrate:
-ifndef MSG
-$(error MSG env var needs to be set to migration message)
-endif
+	@[ "${MSG}" ] || ( echo ">> MSG env var needs to be set to the migration message"; exit 1 )
 	@poetry run alembic revision --autogenerate -m "${MSG}"
 	
