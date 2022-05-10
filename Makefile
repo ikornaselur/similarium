@@ -1,10 +1,14 @@
-all: wordlists create_db_tables prepare_data
+########
+# Data #
+########
+all: wordlists init_db prepare_data
 
 wordlists:
 	@cd scripts && ./download-wordlists.sh
 
-create_db_tables:
-	@poetry run python scripts/create_db.py
+init_db:
+	@poetry run alembic downgrade base
+	@poetry run alembic upgrade head
 
 prepare_data:
 	@poetry run python scripts/dump.py
@@ -17,20 +21,24 @@ postgres:
 		--name postgres \
 		postgres:14
 
-clean:
-	rm word2vec.db*
-	rm hints.json
-	rm nearest.pickle
-
+########
+# Lint #
+########
 lint:
 	@poetry run flake8 scripts src
 
 pyright:
 	@poetry run pyright scripts src
 
+##########
+# Server #
+##########
 server:
 	@poetry run python -m similarium.app
 
+###########
+# Testing #
+###########
 test:
 	@SLACK_APP_TOKEN=xapp-456456 \
 		SLACK_CLIENT_ID=123 \
@@ -40,3 +48,14 @@ test:
 
 shell:
 	@poetry run python scripts/shell.py
+	
+##############
+# Migrations #
+##############
+upgrade:
+	@poetry run alembic upgrade head
+
+migrate:
+	@[ "${MSG}" ] || ( echo ">> MSG env var needs to be set to the migration message"; exit 1 )
+	@poetry run alembic revision --autogenerate -m "${MSG}"
+	
