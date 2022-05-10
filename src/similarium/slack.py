@@ -200,14 +200,19 @@ class SlackGame:
         else:
             guess_info = f"{_idx(guess)}{_similarity(guess)}{_word(guess)}"
 
+        if base_id == "latest":
+            user = guess.latest_guess_user
+        else:
+            user = guess.user
+
         return {
             "type": "context",
             "block_id": f"guess-{base_id}-{guess.word}",
             "elements": (
                 {
                     "type": "image",
-                    "image_url": guess.user.profile_photo,
-                    "alt_text": guess.user.username,
+                    "image_url": user.profile_photo,
+                    "alt_text": user.username,
                 },
                 {"type": "mrkdwn", "text": closeness},
                 {"type": "mrkdwn", "text": guess_info},
