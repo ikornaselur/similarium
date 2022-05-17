@@ -5,3 +5,4 @@
 *.db-shm
 *.db-wal
 data
+config.toml

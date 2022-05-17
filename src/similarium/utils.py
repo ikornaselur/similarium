@@ -1,9 +1,14 @@
+from __future__ import annotations
+
 import datetime as dt
 import math
 import random
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from similarium.target_words import target_words
+
+if TYPE_CHECKING:
+    from similarium.models import Game, SimilarityRange
 
 Vector = list[float]
 
@@ -139,9 +144,21 @@ def timestamp_ms() -> int:
     return int(delta.total_seconds() * 1000)  # Milliseconds
 
 
-def get_header_text(puzzle_number: int, puzzle_date: str) -> str:
-    """Generate header text for a Slack message"""
-    return f"{puzzle_date} - Puzzle number {puzzle_number}"
+def get_header_text(game: Game) -> str:
+    """Generate header text of a game for a Slack message"""
+    return f"{game.date} - Puzzle number {game.puzzle_number}"
+
+
+def get_header_body(game: Game) -> str:
+    """Generate header body of a game for Slack message"""
+
+    sr: SimilarityRange = game.similarity_range
+
+    return (
+        f"The nearest word has a similarity of {sr.top*100:.02f}, "
+        f"the tenth-nearest has a similarity of {sr.top10*100:.02f} and "
+        f"the one thousandth nearest word has a similarity of {sr.rest*100:.02f}."
+    )
 
 
 def get_seconds_left_of_hour() -> float:

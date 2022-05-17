@@ -1,24 +1,44 @@
 from slack_sdk.errors import SlackApiError
 
 from similarium import db
-from similarium.exceptions import ChannelNotFound, NotInChannel
+from similarium.exceptions import ChannelNotFound, GameNotRegistered, NotInChannel
 from similarium.logging import logger
 from similarium.models import Channel, Game
+from similarium.models.similarity_range import SimilarityRange
 from similarium.slack import app, get_bot_token_for_team, get_thread_blocks
-from similarium.utils import get_header_text, get_puzzle_date, get_puzzle_number
+from similarium.utils import (
+    get_header_body,
+    get_header_text,
+    get_puzzle_date,
+    get_puzzle_number,
+)
 
 
 async def start_game(channel_id: str):
     puzzle_number = get_puzzle_number()
     puzzle_date = get_puzzle_date(puzzle_number)
-    header_text = get_header_text(puzzle_number, puzzle_date)
+
+    game = Game.new(
+        channel_id=channel_id,
+        thread_ts="",
+        puzzle_number=puzzle_number,
+        puzzle_date=puzzle_date,
+    )
+    async with db.session() as s:
+        similarity_range = await SimilarityRange.get(game.secret, session=s)
+        if similarity_range is None:
+            raise Exception(f"Unable to find similarity range for {game.secret=}")
+        game.similarity_range = similarity_range
+
+    header_text = get_header_text(game)
+    header_body = get_header_body(game)
 
     async with db.session() as session:
         channel = await Channel.by_id(channel_id, session=session)
 
     if channel is None:
-        # XXX
-        raise Exception("Need to subscribe to a game before manual trigger")
+        logger.warning("Need to subscribe to a game before manual trigger")
+        raise GameNotRegistered()
 
     try:
         resp = await app.client.chat_postMessage(
@@ -32,6 +52,13 @@ async def start_game(channel_id: str):
                         "type": "plain_text",
                         "text": header_text,
                         "emoji": True,
+                    },
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": header_body,
                     },
                 },
                 {"type": "divider"},
@@ -58,12 +85,9 @@ async def start_game(channel_id: str):
                 # Needs to be invited
                 raise NotInChannel()
         return
-    game = Game.new(
-        channel_id=channel_id,
-        thread_ts=resp["ts"],
-        puzzle_number=puzzle_number,
-        puzzle_date=puzzle_date,
-    )
+
+    game.thread_ts = resp["ts"]
+
     async with db.session() as s:
         s.add(game)
         await s.commit()

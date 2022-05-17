@@ -2,9 +2,9 @@
 # flake8: noqa: F401 F403
 import datetime as dt
 
-from IPython import embed
 import pytz
 import sqlalchemy as sa
+from IPython import embed
 from sqlalchemy.future import select
 
 from similarium import db

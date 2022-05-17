@@ -1,5 +1,4 @@
 import math
-import os
 from typing import Literal, Optional, TypedDict
 
 from slack_bolt.app.async_app import AsyncApp
@@ -11,29 +10,37 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 from similarium import db
 from similarium.config import config
 from similarium.models import Game, Guess
-from similarium.utils import get_custom_progress_bar, get_header_text
+from similarium.utils import get_custom_progress_bar, get_header_body, get_header_text
 
 SPACE = " "
 TOP_GUESSES_TO_SHOW = 15
 LATEST_GUESSES_TO_SHOW = 3
 
-installation_store = FileInstallationStore(base_dir="./data/installations")
-oauth_settings = AsyncOAuthSettings(
-    client_id=os.environ["SLACK_CLIENT_ID"],
-    client_secret=os.environ["SLACK_CLIENT_SECRET"],
-    scopes=["commands", "users:read", "chat:write"],
-    installation_store=installation_store,
-    state_store=FileOAuthStateStore(expiration_seconds=600, base_dir="./data/states"),
-)
 
-app = AsyncApp(
-    signing_secret=os.environ["SLACK_SIGNING_SECRET"],
-    installation_store=installation_store,
-    oauth_settings=oauth_settings,
-)
+if config.slack.dev_mode:
+    app = AsyncApp(token=config.slack.bot_token)
+else:
+    installation_store = FileInstallationStore(base_dir="./data/installations")
+    oauth_settings = AsyncOAuthSettings(
+        client_id=config.slack.client_id,
+        client_secret=config.slack.client_secret,
+        scopes=config.slack.scopes,
+        installation_store=installation_store,
+        state_store=FileOAuthStateStore(
+            expiration_seconds=600, base_dir="./data/states"
+        ),
+    )
+    app = AsyncApp(
+        signing_secret=config.slack.signing_secret,
+        installation_store=installation_store,
+        oauth_settings=oauth_settings,
+    )
 
 
 def get_bot_token_for_team(team_id: str) -> str:
+    if config.slack.dev_mode:
+        return config.slack.bot_token
+
     installation = installation_store.find_installation(
         enterprise_id=None,
         team_id=team_id,
@@ -124,7 +131,7 @@ class SlackGame:
             "type": "header",
             "text": {
                 "type": "plain_text",
-                "text": get_header_text(self._game.puzzle_number, self._game.date),
+                "text": get_header_text(self._game),
                 "emoji": True,
             },
         }
@@ -283,6 +290,7 @@ async def get_thread_blocks(game_id: int) -> list:
 
         blocks = [
             slack_game.header,
+            slack_game.markdown_section(get_header_body(game)),
             await slack_game.finished(session=session) if not game.active else None,
             slack_game.divider,
         ]
