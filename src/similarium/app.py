@@ -170,7 +170,10 @@ async def slash(ack, respond, command, client):
                 await start_game(channel_id)
             except GameNotRegistered:
                 await respond(
-                    text=":no_entry_sign: You need to register a game to the channel before manual posting"
+                    text=(
+                        ":no_entry_sign: You need to register a game to the channel"
+                        " before manual posting"
+                    )
                 )
             except (ChannelNotFound, NotInChannel):
                 await respond(
