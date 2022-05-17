@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
-from similarium.models import Game, User, Guess
+from similarium.models import Game, Guess, User
 
 
 async def test_game_add_guess_adds_guess(db, game_id: int, user_id: str) -> None:

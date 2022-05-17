@@ -1,6 +1,14 @@
+from unittest import mock
+
 import pytest
 
-from similarium.utils import cos_sim, get_custom_progress_bar, get_secret
+from similarium.utils import (
+    cos_sim,
+    get_custom_progress_bar,
+    get_header_body,
+    get_header_text,
+    get_secret,
+)
 
 
 def test_get_custom_progress_bar_no_progress() -> None:
@@ -133,3 +141,29 @@ def test_get_secret_is_different_for_different_day() -> None:
 def test_cos_sim() -> None:
     assert cos_sim([1, 2], [3, 4]) == pytest.approx(0.9838699100999074)
     assert cos_sim([3, 4], [1, 2]) == pytest.approx(0.9838699100999074)
+
+
+def test_get_header_text() -> None:
+    game = mock.Mock(date="April 21st", puzzle_number=13)
+
+    assert get_header_text(game) == "April 21st - Puzzle number 13"
+
+    game = mock.Mock(date="December 24th", puzzle_number=67)
+
+    assert get_header_text(game) == "December 24th - Puzzle number 67"
+
+
+def test_get_header_body() -> None:
+    game = mock.Mock(
+        similarity_range=mock.Mock(
+            top=0.6731,
+            top10=0.2759,
+            rest=0.1312,
+        )
+    )
+
+    assert get_header_body(game) == (
+        "The nearest word has a similarity of 67.31, "
+        "the tenth-nearest has a similarity of 27.59 and "
+        "the one thousandth nearest word has a similarity of 13.12."
+    )

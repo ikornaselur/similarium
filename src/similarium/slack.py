@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 from similarium import db
 from similarium.config import config
 from similarium.models import Game, Guess
-from similarium.utils import get_custom_progress_bar, get_header_text
+from similarium.utils import get_custom_progress_bar, get_header_body, get_header_text
 
 SPACE = " "
 TOP_GUESSES_TO_SHOW = 15
@@ -131,7 +131,7 @@ class SlackGame:
             "type": "header",
             "text": {
                 "type": "plain_text",
-                "text": get_header_text(self._game.puzzle_number, self._game.date),
+                "text": get_header_text(self._game),
                 "emoji": True,
             },
         }
@@ -290,6 +290,7 @@ async def get_thread_blocks(game_id: int) -> list:
 
         blocks = [
             slack_game.header,
+            slack_game.markdown_section(get_header_body(game)),
             await slack_game.finished(session=session) if not game.active else None,
             slack_game.divider,
         ]

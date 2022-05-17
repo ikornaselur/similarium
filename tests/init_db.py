@@ -1,6 +1,6 @@
 # flake8: noqa: E501
-from similarium.models import Nearby, SimilarityRange, Word2Vec
 from similarium import db
+from similarium.models import Nearby, SimilarityRange, Word2Vec
 
 
 async def insert_data():
