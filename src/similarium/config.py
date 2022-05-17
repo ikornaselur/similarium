@@ -26,6 +26,29 @@ class Database:
 
 
 @dc.dataclass
+class Logging:
+    log_level: str
+    web_log_level: str
+
+
+@dc.dataclass
+class Slack:
+    dev_mode: bool
+    bot_token: str
+    app_token: str
+    client_id: str
+    client_secret: str
+    signing_secret: str
+    scopes: list[str]
+
+
+@dc.dataclass
+class Sentry:
+    dsn: str
+    env: str
+
+
+@dc.dataclass
 class Rules:
     similarity_count: int
 
@@ -34,6 +57,9 @@ class Rules:
 class Config:
     files: Files
     database: Database
+    logging: Logging
+    slack: Slack
+    sentry: Sentry
     rules: Rules
 
 

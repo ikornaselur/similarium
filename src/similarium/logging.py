@@ -1,15 +1,17 @@
 import logging
-import os
 
 from rich.logging import RichHandler
 
+from similarium.config import config
+
 logger = logging.getLogger("similarium")
 web_logger = logging.getLogger("similarium.web")
-logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
-web_logger.setLevel(os.environ.get("WEB_LOG_LEVEL", "WARNING"))
+logger.setLevel(config.logging.log_level)
+web_logger.setLevel(config.logging.web_log_level)
 
 
 def configure_logger() -> None:
+
     logger.handlers.clear()
     logger.addHandler(RichHandler(log_time_format="[%X]", markup=False))
 

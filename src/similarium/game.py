@@ -1,7 +1,7 @@
 from slack_sdk.errors import SlackApiError
 
 from similarium import db
-from similarium.exceptions import ChannelNotFound, NotInChannel
+from similarium.exceptions import ChannelNotFound, GameNotRegistered, NotInChannel
 from similarium.logging import logger
 from similarium.models import Channel, Game
 from similarium.slack import app, get_bot_token_for_team, get_thread_blocks
@@ -17,8 +17,8 @@ async def start_game(channel_id: str):
         channel = await Channel.by_id(channel_id, session=session)
 
     if channel is None:
-        # XXX
-        raise Exception("Need to subscribe to a game before manual trigger")
+        logger.warning("Need to subscribe to a game before manual trigger")
+        raise GameNotRegistered()
 
     try:
         resp = await app.client.chat_postMessage(

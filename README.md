@@ -17,6 +17,11 @@ install -E dump` for the scripts to work.
 If you already have a database that has been populated, these dependencies are
 not required
 
+### Config
+
+Copy `config.example.toml` to `config.toml` and replae the secrets with
+relevant values
+
 ### Data processing
 
 The project expects an english word list and a banned word list to work with.
@@ -61,6 +66,23 @@ It has a 989 percentile normally to "apple", but was added this way to be
 easily able to test similar words that end up not being found in the
 pre-populated "nearby" words. This would be a '???' word in the original game.
 
+
+## Deployment
+
+You need to create a new Slack App. The app needs the following features and
+functionality:
+
+* Slash commands
+  - `/similarium` command to manage games in the Slack team
+* Bots
+* Permissions
+  - Bot Token Scopes:
+    - `chat:write`
+    - `commands`
+    - `users:read`
+  - `connections:write` Only if running in Socket mode
+* Interactive Components
+  - Required only when running in callback mode, can be ignored for Socket mode
 
 ## Attributions
 Based heavily on the original GNU GPLv3 licensed Semantle source code by [David

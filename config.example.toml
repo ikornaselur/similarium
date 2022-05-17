@@ -11,15 +11,17 @@ vectors = "GoogleNews-vectors-negative300.bin"
 uri = "sqlite+aiosqlite:///similarium.db"
 
 [logging]
-log_level = "DEBUG"
-web_log_level = "DEBUG"
+log_level = "INFO"
+web_log_level = "WARNING"
 
 [slack]
-socket_mode = true
+dev_mode = true
+bot_token = "<BOT_TOKEN>"  # Only required in dev_mode
 app_token = "<APP_TOKEN>"
 client_id = "<CLIENT_ID>"
 client_secret = "<CLIENT_SECRET>"
 signing_secret = "<SIGNING_SECRET>"
+scopes = ["commands", "users:read", "chat:write"]
 
 [sentry]
 dsn = "<SENTRY_DSN>"

@@ -1,6 +1,5 @@
 import asyncio
 import datetime as dt
-import os
 import re
 from asyncio.exceptions import CancelledError
 
@@ -8,13 +7,16 @@ import pytz
 import sentry_sdk
 from aiohttp import web
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
+from slack_bolt.adapter.socket_mode.aiohttp import AsyncSocketModeHandler
 from slack_bolt.app.async_server import AsyncSlackAppServer
 from sqlalchemy.sql.expression import delete
 
 from similarium import db
 from similarium.command import Manual, Start, Stop, parse_command
+from similarium.config import config
 from similarium.exceptions import (
     ChannelNotFound,
+    GameNotRegistered,
     InvalidWord,
     NotFound,
     NotInChannel,
@@ -31,7 +33,8 @@ from similarium.utils import get_puzzle_number
 REGEX = re.compile(r"^(?P<guess>[A-Za-z]+)$")
 
 sentry_sdk.init(
-    dsn=os.environ["SENTRY_DSN"],
+    dsn=config.sentry.dsn,
+    environment=config.sentry.env,
     integrations=[AioHttpIntegration()],
 )
 
@@ -165,6 +168,10 @@ async def slash(ack, respond, command, client):
             logger.debug("Starting manual game on channel")
             try:
                 await start_game(channel_id)
+            except GameNotRegistered:
+                await respond(
+                    text=":no_entry_sign: You need to register a game to the channel before manual posting"
+                )
             except (ChannelNotFound, NotInChannel):
                 await respond(
                     text=(
@@ -190,27 +197,46 @@ async def cleanup_task(app):
         pass
 
 
+async def run_socket_mode():
+    handler = AsyncSocketModeHandler(app, config.slack.app_token)
+
+    logger.debug("Starting background task")
+    background_task = asyncio.create_task(hourly_game_creator())
+
+    await handler.start_async()
+
+    logger.debug("Cleanup background task")
+    background_task.cancel()
+    try:
+        await background_task
+    except CancelledError:
+        pass
+
+
 def main() -> None:
     configure_logger()
     loop = asyncio.new_event_loop()
     init_exception_handler(loop)
 
-    server = AsyncSlackAppServer(
-        port=3000,
-        path="/slack/events",
-        app=app,
-        host="0.0.0.0",
-    )
-    server.web_app.on_startup.append(startup_task)
-    server.web_app.on_cleanup.append(cleanup_task)
+    if config.slack.dev_mode:
+        asyncio.run(run_socket_mode())
+    else:
+        server = AsyncSlackAppServer(
+            port=3000,
+            path="/slack/events",
+            app=app,
+            host="0.0.0.0",
+        )
+        server.web_app.on_startup.append(startup_task)
+        server.web_app.on_cleanup.append(cleanup_task)
 
-    web.run_app(
-        server.web_app,
-        host=server.host,
-        port=server.port,
-        access_log=web_logger,
-        loop=loop,
-    )
+        web.run_app(
+            server.web_app,
+            host=server.host,
+            port=server.port,
+            access_log=web_logger,
+            loop=loop,
+        )
 
 
 if __name__ == "__main__":
