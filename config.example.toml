@@ -8,8 +8,22 @@ vectors = "GoogleNews-vectors-negative300.bin"
 # For sqlite3: "sqlite+aiosqlite:///<path/to/database.db>"
 # For in-memory: "sqlite+aiosqlite:///:memory:"
 
-# uri = "postgresql+asyncpg://postgres:s3cr3t@localhost:5432"
 uri = "sqlite+aiosqlite:///similarium.db"
+
+[logging]
+log_level = "DEBUG"
+web_log_level = "DEBUG"
+
+[slack]
+socket_mode = true
+app_token = "<APP_TOKEN>"
+client_id = "<CLIENT_ID>"
+client_secret = "<CLIENT_SECRET>"
+signing_secret = "<SIGNING_SECRET>"
+
+[sentry]
+dsn = "<SENTRY_DSN>"
+env = "dev"
 
 [rules]
 similarity_count = 1000
