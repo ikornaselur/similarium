@@ -10,7 +10,7 @@ from sqlalchemy.sql.schema import Index
 
 from similarium.config import config
 from similarium.db import Base
-from similarium.exceptions import InvalidWord, NotFound
+from similarium.exceptions import InvalidWord, NotFound, UserAlreadyWon
 from similarium.logging import logger
 from similarium.models.game_user_winner_association import GameUserWinnerAssociation
 from similarium.utils import get_secret, get_similarity, timestamp_ms
@@ -128,6 +128,15 @@ class Game(Base):
         logger.debug(f"Adding guess {word=} to {self=}")
 
         # Check if user has already won
+        stmt = select(GameUserWinnerAssociation).where(
+            GameUserWinnerAssociation.game_id == self.id,
+            GameUserWinnerAssociation.user_id == user_id,
+        )
+        existing_assoc = await session.scalar(stmt)
+        if existing_assoc is not None:
+            raise UserAlreadyWon(
+                f"User won already in with {existing_assoc.guess_idx} guesses"
+            )
 
         if word == self.secret:
             logger.debug(f"Guess was the secret, adding {user_id=} to winners")
