@@ -127,28 +127,25 @@ class Help(Command):
 
 
 def parse_command(text: str) -> Command:
-    parts = text.split(" ")
-    subcommand = parts[0]
-
-    match subcommand:
-        case "start":
-            if len(parts) < 2:
-                raise ParseException(
-                    ":no_entry_sign: Time missing from start command :no_entry_sign:"
-                )
+    match text.split(" "):
+        case ["start"]:
+            raise ParseException(
+                ":no_entry_sign: Time missing from start command :no_entry_sign:"
+            )
+        case ["start", time, *_]:
             # Try to parse the time
             try:
-                time = parser.parse(parts[1]).time()
+                parsed_time = parser.parse(time).time()
             except parser.ParserError:
                 raise ParseException(
                     "Unable to parse time. Try tomething like 9am or 13:00"
                 )
-            return Start(when=time)
-        case "stop":
+            return Start(when=parsed_time)
+        case ["stop", *_]:
             return Stop()
-        case "help":
+        case ["help", *_]:
             return Help()
-        case "manual":
+        case ["manual", *_]:
             return Manual()
         case _:
             raise ParseException(":no_entry_sign: Unknown command :no_entry_sign:")
