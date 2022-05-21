@@ -125,22 +125,22 @@ async def slash(ack, respond, say, command, client):
             # We're going to go by today to try to deal with daylight savings
             # TODO: Properly handle DST
             timezone = pytz.timezone(user_data["tz"])
+            user_dt = dt.datetime.now(timezone).replace(
+                hour=when.hour,
+                minute=0,
+                second=0,
+                microsecond=0,
+            )
             utc = pytz.timezone("UTC")
 
-            datetime = utc.normalize(
-                dt.datetime.now(timezone).replace(
-                    hour=when.hour,
-                    minute=0,
-                    second=0,
-                    microsecond=0,
-                )
-            )
+            datetime = utc.normalize(user_dt)
             time = datetime.time()
 
             # Check that we have permission to post to the channel
             try:
                 await say(
-                    f"<@{user_id}> has started a daily game of Similarium {when_human}"
+                    f"<@{user_id}> has started a daily game of Similarium"
+                    f" {when_human} {user_dt.tzname()}"
                 )
             except SlackApiError as e:
                 response = e.response.data
