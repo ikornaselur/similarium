@@ -4,7 +4,7 @@ services:
   similarium:
     image: absalon/similarium:1.1.1-sqlite
     volumes:
-      - ./config.toml:/app/config.toml
-      - ./similarium.db:/app/similarium.db
-    expose:
-      - 8080
+      - ../config.toml:/app/config.toml
+      - ../similarium.db:/app/similarium.db
+    ports:
+      - "127.0.0.1:3000:3000"
