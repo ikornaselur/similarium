@@ -12,6 +12,7 @@ from similarium.config import config
 from similarium.db import Base
 from similarium.exceptions import InvalidWord, NotFound
 from similarium.logging import logger
+from similarium.models.game_user_winner_association import GameUserWinnerAssociation
 from similarium.utils import get_secret, get_similarity, timestamp_ms
 
 if TYPE_CHECKING:
@@ -31,6 +32,8 @@ class Game(Base):
 
     channel = relationship("Channel", backref="games", lazy="joined")
     guesses = relationship("Guess", back_populates="game", lazy="joined")
+    winners = relationship("GameUserWinnerAssociation")
+
     similarity_range = relationship(
         "SimilarityRange", primaryjoin="foreign(Game.secret) == SimilarityRange.word"
     )
@@ -79,6 +82,7 @@ class Game(Base):
             )
             .options(selectinload(cls.guesses))
             .options(selectinload(cls.similarity_range))
+            .options(selectinload(cls.winners))
         )
 
         result = await session.execute(stmt)
@@ -94,6 +98,7 @@ class Game(Base):
             .where(cls.channel_id == channel_id, cls.active)
             .options(selectinload(cls.guesses))
             .options(selectinload(cls.similarity_range))
+            .options(selectinload(cls.winners))
         )
 
         result = await session.execute(stmt)
@@ -108,6 +113,7 @@ class Game(Base):
                 .where(cls.id == game_id)
                 .options(selectinload(cls.guesses))
                 .options(selectinload(cls.similarity_range))
+                .options(selectinload(cls.winners))
             )
         ).one_or_none()
 
@@ -121,9 +127,42 @@ class Game(Base):
 
         logger.debug(f"Adding guess {word=} to {self=}")
 
+        # Check if user has already won
+
         if word == self.secret:
-            logger.info(f"Secret word has been found: {word=}")
-            self.active = False
+            logger.debug(f"Guess was the secret, adding {user_id=} to winners")
+            self.winners.append(
+                GameUserWinnerAssociation(
+                    game_id=self.id, user_id=user_id, guess_idx=len(self.guesses) + 1
+                )
+            )
+            similarity = 100.0
+            percentile = config.rules.similarity_count
+        else:
+            try:
+                nearby = await Nearby.get(
+                    session=session, word=self.secret, neighbor=word
+                )
+            except NotFound:
+                guess_vec = await Word2Vec.get(word, session=session)
+                if guess_vec is None:
+                    logger.debug(f"Word not recognised: {word=}")
+                    raise InvalidWord(f"Word not recognised: {word}")
+
+                logger.debug(f"Guess was not within {config.rules.similarity_count}")
+                secret_vec = await Word2Vec.get(self.secret, session=session)
+                if secret_vec is None:
+                    raise Exception("Secret word not recognised?")
+
+                similarity = get_similarity(
+                    secret_vec.expanded_vec, guess_vec.expanded_vec
+                )
+                percentile = 0
+            else:
+                similarity = get_similarity(
+                    nearby.word_vec.expanded_vec, nearby.neighbor_vec.expanded_vec
+                )
+                percentile = nearby.percentile
 
         # Check if guess exists
         guess = await Guess.get(session=session, word=word, game_id=self.id)
@@ -132,27 +171,6 @@ class Game(Base):
             guess.updated = timestamp_ms()  # type: ignore
             guess.latest_guess_user_id = user_id  # type: ignore
             return guess
-
-        try:
-            nearby = await Nearby.get(session=session, word=self.secret, neighbor=word)
-        except NotFound:
-            guess_vec = await Word2Vec.get(word, session=session)
-            if guess_vec is None:
-                logger.debug(f"Word not recognised: {word=}")
-                raise InvalidWord(f"Word not recognised: {word}")
-
-            logger.debug(f"Guess was not within {config.rules.similarity_count}")
-            secret_vec = await Word2Vec.get(self.secret, session=session)
-            if secret_vec is None:
-                raise Exception("Secret word not recognised?")
-
-            similarity = get_similarity(secret_vec.expanded_vec, guess_vec.expanded_vec)
-            percentile = 0
-        else:
-            similarity = get_similarity(
-                nearby.word_vec.expanded_vec, nearby.neighbor_vec.expanded_vec
-            )
-            percentile = nearby.percentile
 
         # Create a new guess
         guess = await Guess.new(
