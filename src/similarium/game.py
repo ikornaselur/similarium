@@ -118,8 +118,7 @@ async def end_game(channel_id: str) -> None:
         logger.debug(f"Got {len(active_games)} active games to end in {channel_id=}")
 
         for game in active_games:
-            # TODO: Update message on slack...
-            game.active = False
+            game.active = False  # type: ignore
             await session.commit()
 
             await app.client.chat_update(

@@ -169,41 +169,60 @@ class SlackGame:
     async def finished(
         self, *, session: AsyncSession
     ) -> Optional[MarkdownSectionBlock]:
-        top_guesses = await self._game.top_guesses(1, session=session)
-        top_guess = None
-        if (
-            not len(top_guesses)
-            or (top_guess := top_guesses[0]).word != self._game.secret
-        ):
-            text_lines = [
-                ":cry: *No one found the word!*",
-                f"The secret word of the day was: *{self._game.secret}*",
-            ]
-            if top_guess is not None:
-                text_lines.append(
-                    f"The closest guess was made by <@{top_guess.user_id}>!"
-                )
-            text = "\n".join(text_lines)
-        else:
-            text = "\n".join(
-                [
-                    ":tada: *The secret has been found!* :tada:",
-                    f"The secret word of the day was: *{self._game.secret}*",
-                    f"The winning guess was made by <@{top_guess.user_id}>!",
-                ]
+        winners = [
+            f"<@{winner.user_id}> found the secret on guess {winner.guess_idx}"
+            for winner in self._game.winners
+        ]
+        secret_found = len(winners) > 0
+
+        if self._game.active and not secret_found:
+            return None
+
+        if self._game.active:
+            # Game still active with a found secret
+            return self.markdown_section(
+                text="\n".join([":tada: *The secret has been found!* :tada:"] + winners)
             )
 
-        return self.markdown_section(text=text)
+        # Game has been finished, set final state
+        if secret_found:
+            return self.markdown_section(
+                text="\n".join(
+                    [
+                        ":tada: *The secret was found!* :tada:",
+                        f"The secret word of the day was: *{self._game.secret}*",
+                    ]
+                    + winners
+                )
+            )
+
+        # No one found the secret
+        text_lines = [
+            ":cry: *No one found the word!*",
+            f"The secret word of the day was: *{self._game.secret}*",
+        ]
+
+        top_guesses = await self._game.top_guesses(1, session=session)
+        if len(top_guesses) > 0:
+            text_lines.append(
+                f"The closest guess was made by <@{top_guesses[0].user_id}>!"
+            )
+        return self.markdown_section(text="\n".join(text_lines))
 
     def guess_context(self, guess: Guess, base_id: str) -> GuessContextBlock:
         closeness = _closeness(guess)
 
-        if guess.percentile == config.rules.similarity_count:
-            # It's the secret word!
-            # TODO: check guess.word == guess.game.secret? Add guess.is_secret?
-            guess_info = (
-                f"{_idx(guess)}{_similarity(guess)}:tada: {_word(guess)} :tada:"
-            )
+        if guess.is_secret:
+            if guess.game.active:
+                # Keep it secret still!
+                guess_info = (
+                    f"{_idx(guess)}{_similarity(guess)}:see_no_evil: _Secret will be"
+                    " revealed at the end_ :see_no_evil:"
+                )
+            else:
+                guess_info = (
+                    f"{_idx(guess)}{_similarity(guess)}:tada: {_word(guess)} :tada:"
+                )
         else:
             guess_info = f"{_idx(guess)}{_similarity(guess)}{_word(guess)}"
 
@@ -291,7 +310,7 @@ async def get_thread_blocks(game_id: int) -> list:
         blocks = [
             slack_game.header,
             slack_game.markdown_section(get_header_body(game)),
-            await slack_game.finished(session=session) if not game.active else None,
+            await slack_game.finished(session=session),
             slack_game.divider,
         ]
         if game.active:

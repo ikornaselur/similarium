@@ -28,6 +28,10 @@ class InvalidWord(SimilariumException):
     pass
 
 
+class UserAlreadyWon(SimilariumException):
+    pass
+
+
 class ParseException(SimilariumException):
     pass
 

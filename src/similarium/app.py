@@ -16,18 +16,16 @@ from similarium import db
 from similarium.command import Help, Manual, Start, Stop, parse_command
 from similarium.config import config
 from similarium.exceptions import (
-    ChannelNotFound,
-    GameNotRegistered,
     InvalidWord,
     NotFound,
-    NotInChannel,
     ParseException,
+    UserAlreadyWon,
     init_exception_handler,
 )
-from similarium.game import start_game, update_game
+from similarium.game import end_game, start_game, update_game
 from similarium.logging import configure_logger, logger, web_logger
 from similarium.models import Channel, Game, User
-from similarium.slack import app
+from similarium.slack import app, get_bot_token_for_team
 from similarium.tasks import hourly_game_creator
 from similarium.utils import get_puzzle_number
 
@@ -41,7 +39,7 @@ sentry_sdk.init(
 
 
 @app.action("submit-guess")
-async def handle_some_action(ack, body, client):
+async def handle_some_action(ack, respond, body, client):
     await ack()
 
     value = body["state"]["values"]["guess-input"]["submit-guess"]["value"]
@@ -49,6 +47,15 @@ async def handle_some_action(ack, body, client):
 
     message_ts = body["container"]["message_ts"]
     channel = body["container"]["channel_id"]
+    team_id = body["user"]["team_id"]
+
+    async def _ephemeral(text: str) -> None:
+        await client.chat_postEphemeral(
+            token=get_bot_token_for_team(team_id),
+            text=text,
+            channel=channel,
+            user=user_id,
+        )
 
     async with db.session() as session:
         puzzle_number = get_puzzle_number()
@@ -80,9 +87,23 @@ async def handle_some_action(ack, body, client):
                 await session.commit()
 
             try:
-                await game.add_guess(word=word, user_id=user_id, session=session)
+                guess = await game.add_guess(
+                    word=word, user_id=user_id, session=session
+                )
                 await session.commit()
+                if guess.is_secret:
+                    # Let the user know that it was the secret
+                    await _ephemeral(
+                        f":tada: You found the secret! It was *{word}* :tada:"
+                    )
+            except UserAlreadyWon:
+                await _ephemeral(
+                    ":warning: You already got the winning word, you can't make"
+                    " any further guesses :warning:"
+                )
+                return
             except InvalidWord:
+                await _ephemeral(f':warning: *"{word}" is not a valid word!* :warning:')
                 return
 
     await update_game(game)
@@ -184,27 +205,20 @@ async def slash(ack, respond, say, command, client):
                 await session.execute(stmt)
                 await session.commit()
             await say(f"<@{user_id}> has stopped the daily game of Similarium")
-        case Manual(text=text, blocks=blocks):
-            logger.debug("Starting manual game on channel")
-            try:
-                await start_game(channel_id)
-            except GameNotRegistered:
-                await respond(
-                    text=(
-                        ":no_entry_sign: You need to register a game to the channel"
-                        " before manual posting"
-                    )
-                )
-            except (ChannelNotFound, NotInChannel):
-                await respond(
-                    text=(
-                        ":no_entry_sign: Unable to post to channel. You need to invite"
-                        " @Similarium to this channel: `/invite @Similarium`"
-                    )
-                )
-            await respond(text=text, blocks=blocks)
         case Help(text=text, blocks=blocks):
             await respond(text=text, blocks=blocks)
+        case Manual(action="start"):
+            logger.debug("Manually starting game on channel")
+            try:
+                await start_game(channel_id)
+            except Exception as e:
+                await respond(text=str(e))
+        case Manual(action="end"):
+            logger.debug("Manually ending game on channel")
+            try:
+                await end_game(channel_id)
+            except Exception as e:
+                await respond(text=str(e))
 
 
 async def startup_task(app):
