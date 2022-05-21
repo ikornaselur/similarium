@@ -10,6 +10,28 @@ from similarium.models import Channel
 from similarium.utils import get_seconds_left_of_hour
 
 
+async def create_games(hour: int) -> None:
+    """Create the games for a certain hour on all active channels"""
+    async with db.session() as session:
+        channels = await Channel.by_hour(hour, session=session)
+
+    logger.debug(f"Ending games in {len(channels)} channels")
+    # End active games
+    results = await asyncio.gather(
+        *[end_game(channel.id) for channel in channels], return_exceptions=True
+    )
+    for exc in filter(bool, results):
+        sentry_sdk.capture_exception(exc)
+
+    logger.debug(f"Starting games in {len(channels)} channels")
+    # Start new games
+    results = await asyncio.gather(
+        *[start_game(channel.id) for channel in channels], return_exceptions=True
+    )
+    for exc in filter(bool, results):
+        sentry_sdk.capture_exception(exc)
+
+
 async def hourly_game_creator() -> None:
     """Hourly game creator
 
@@ -24,16 +46,7 @@ async def hourly_game_creator() -> None:
 
             current_hour = dt.datetime.now(dt.timezone.utc).hour
 
-            async with db.session() as session:
-                channels = await Channel.by_hour(current_hour, session=session)
-
-            logger.debug(f"Ending games in {len(channels)} channels")
-            # End active games
-            await asyncio.gather(*[end_game(channel.id) for channel in channels])
-
-            logger.debug(f"Starting games in {len(channels)} channels")
-            # Start new games
-            await asyncio.gather(*[start_game(channel.id) for channel in channels])
+            await create_games(current_hour)
 
             # TODO Timeouts?
         except Exception as e:
