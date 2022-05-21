@@ -27,7 +27,7 @@ from similarium.exceptions import (
 from similarium.game import start_game, update_game
 from similarium.logging import configure_logger, logger, web_logger
 from similarium.models import Channel, Game, User
-from similarium.slack import app
+from similarium.slack import app, get_bot_token_for_team
 from similarium.tasks import hourly_game_creator
 from similarium.utils import get_puzzle_number
 
@@ -41,7 +41,7 @@ sentry_sdk.init(
 
 
 @app.action("submit-guess")
-async def handle_some_action(ack, body, client):
+async def handle_some_action(ack, respond, body, client):
     await ack()
 
     value = body["state"]["values"]["guess-input"]["submit-guess"]["value"]
@@ -83,6 +83,13 @@ async def handle_some_action(ack, body, client):
                 await game.add_guess(word=word, user_id=user_id, session=session)
                 await session.commit()
             except InvalidWord:
+                team_id = body["user"]["team_id"]
+                await client.chat_postEphemeral(
+                    token=get_bot_token_for_team(team_id),
+                    text=f':warning: *"{word}" is not a valid word!* :warning:',
+                    channel=channel,
+                    user=user_id,
+                )
                 return
 
     await update_game(game)
