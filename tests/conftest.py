@@ -62,3 +62,10 @@ async def user_id(db) -> AsyncIterator[str]:
         await session.commit()
 
     yield _user.id
+
+
+@pytest.fixture(autouse=True)
+async def slack_app() -> AsyncIterator[mock.AsyncMock]:
+    """Mock slack app completely"""
+    with mock.patch("similarium.slack.AsyncApp") as m:
+        yield m
