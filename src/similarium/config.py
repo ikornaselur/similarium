@@ -75,7 +75,7 @@ def from_dict(klass, d) -> Any:
     return klass(**{f: from_dict(fieldtypes[f], d[f]) for f in d})
 
 
-_config_path = Path(__file__).parent.parent.parent / "config.toml"
+_config_path = Path("./config.toml")
 with open(_config_path, "r") as f:
     _config = toml.load(f)
 
