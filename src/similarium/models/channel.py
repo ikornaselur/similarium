@@ -16,7 +16,7 @@ class Channel(Base):
     team_id = sa.Column(sa.Text, nullable=False)
     # The hour to post the daily puzzle, on UTC+0
     hour = sa.Column(sa.Integer, nullable=False)
-    active = sa.Column(sa.Boolean, default=True)
+    active = sa.Column(sa.Boolean, default=True, nullable=False)
 
     @classmethod
     async def by_id(
