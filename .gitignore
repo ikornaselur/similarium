@@ -6,3 +6,4 @@
 *.db-wal
 data
 config.toml
+requirements.txt

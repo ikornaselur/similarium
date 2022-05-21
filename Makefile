@@ -1,3 +1,6 @@
+VERSION := $(shell sed -n 's/^ *version.*=.*"\([^"]*\)".*/\1/p' pyproject.toml)
+DOCKER_REPO = "absalon/similarium"
+
 ########
 # Data #
 ########
@@ -59,3 +62,30 @@ migrate:
 	@[ "${MSG}" ] || ( echo ">> MSG env var needs to be set to the migration message"; exit 1 )
 	@poetry run alembic revision --autogenerate -m "${MSG}"
 	
+##########
+# Docker #
+##########
+docker_build:
+	@poetry export -E sqlite -f requirements.txt > requirements.txt
+	@docker build -t $(DOCKER_REPO):latest-sqlite .
+
+	@poetry export -E postgres -f requirements.txt > requirements.txt
+	@docker build -t $(DOCKER_REPO):latest-postgres .
+
+	@rm requirements.txt
+
+docker_tag_version: docker_build
+	@docker tag $(DOCKER_REPO):latest-sqlite $(DOCKER_REPO):$(VERSION)-sqlite
+	@docker tag $(DOCKER_REPO):latest-postgres $(DOCKER_REPO):$(VERSION)-postgres
+
+docker_push: docker_tag_version
+	@docker push $(DOCKER_REPO):latest-sqlite
+	@docker push $(DOCKER_REPO):latest-postgres
+	@docker push $(DOCKER_REPO):$(VERSION)-sqlite
+	@docker push $(DOCKER_REPO):$(VERSION)-postgres
+
+docker_run:
+	@docker run \
+		-v "$(shell pwd)"/config.toml:/app/config.toml \
+		-v "$(shell pwd)"/similarium.db:/app/similarium.db \
+		$(DOCKER_REPO):latest-sqlite
