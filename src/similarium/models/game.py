@@ -32,7 +32,9 @@ class Game(Base):
 
     channel = relationship("Channel", backref="games", lazy="joined")
     guesses = relationship("Guess", back_populates="game", lazy="joined")
-    winners = relationship("GameUserWinnerAssociation")
+    winners = relationship(
+        "GameUserWinnerAssociation", order_by="GameUserWinnerAssociation.guess_idx"
+    )
 
     similarity_range = relationship(
         "SimilarityRange", primaryjoin="foreign(Game.secret) == SimilarityRange.word"
@@ -134,9 +136,7 @@ class Game(Base):
         )
         existing_assoc = await session.scalar(stmt)
         if existing_assoc is not None:
-            raise UserAlreadyWon(
-                f"User won already in with {existing_assoc.guess_idx} guesses"
-            )
+            raise UserAlreadyWon("User already won")
 
         if word == self.secret:
             logger.debug(f"Guess was the secret, adding {user_id=} to winners")

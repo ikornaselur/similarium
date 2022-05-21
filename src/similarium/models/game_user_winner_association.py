@@ -14,3 +14,8 @@ class GameUserWinnerAssociation(Base):
     user = relationship("User")
 
     guess_idx = sa.Column(sa.Integer, nullable=False)
+
+    def __repr__(self) -> str:
+        game = self.game_id
+        user = self.user_id
+        return f"<Winner: guess {self.guess_idx} ({game=} {user=})>"

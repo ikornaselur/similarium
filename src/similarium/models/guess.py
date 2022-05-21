@@ -90,6 +90,10 @@ class Guess(Base):
 
         return result.scalars().one_or_none()
 
+    @property
+    def is_secret(self) -> bool:
+        return self.word == self.game.secret
+
     def __repr__(self) -> str:
         if self.percentile:
             percentile_repr = f"{self.percentile}/{config.rules.similarity_count}"
