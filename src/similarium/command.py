@@ -98,7 +98,9 @@ class Help(Command):
                         " daily puzzle at the provided time on the current channel. The"
                         ' time can be something like "9am" or "13:00" for example.\nThe'
                         " time will be based on your timezone.\nThe puzzle will be"
-                        " posted at the start of the hour."
+                        " posted at the start of the hour.\n_Please note that the daily"
+                        " game is posted at the start of every hour, so if you specify"
+                        " 13:45, it will be posted at 13:00_"
                     ),
                 },
                 "fields": [
@@ -140,7 +142,8 @@ def parse_command(text: str) -> Command:
                 raise ParseException(
                     "Unable to parse time. Try tomething like 9am or 13:00"
                 )
-            return Start(when=parsed_time)
+            # TODO: Support minute as well
+            return Start(when=parsed_time.replace(minute=0))
         case ["stop", *_]:
             return Stop()
         case ["help", *_]:

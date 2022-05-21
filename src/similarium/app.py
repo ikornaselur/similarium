@@ -9,10 +9,11 @@ from aiohttp import web
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from slack_bolt.adapter.socket_mode.aiohttp import AsyncSocketModeHandler
 from slack_bolt.app.async_server import AsyncSlackAppServer
+from slack_sdk.errors import SlackApiError
 from sqlalchemy.sql.expression import delete
 
 from similarium import db
-from similarium.command import Manual, Start, Stop, parse_command
+from similarium.command import Help, Manual, Start, Stop, parse_command
 from similarium.config import config
 from similarium.exceptions import (
     ChannelNotFound,
@@ -88,7 +89,7 @@ async def handle_some_action(ack, body, client):
 
 
 @app.command("/similarium")
-async def slash(ack, respond, command, client):
+async def slash(ack, respond, say, command, client):
     await ack()
 
     text = command["text"].strip()
@@ -97,12 +98,14 @@ async def slash(ack, respond, command, client):
     except ParseException as e:
         await respond(text=str(e))
         return
+
     logger.info(f"Received {parsed_command} command")
     channel_id = command["channel_id"]
     team_id = command["team_id"]
+    user_id = command["user_id"]
 
     match parsed_command:
-        case Start():
+        case Start(when=when, when_human=when_human):
             # Check if there is already a game registered for the channel
             async with db.session() as session:
                 channel = await Channel.by_id(channel_id, session=session)
@@ -117,7 +120,7 @@ async def slash(ack, respond, command, client):
                 return
 
             # Get user timezone to normalize the game posting to UTC+0
-            user_info = await client.users_info(user=command["user_id"])
+            user_info = await client.users_info(user=user_id)
             user_data = user_info.data["user"]
             # We're going to go by today to try to deal with daylight savings
             # TODO: Properly handle DST
@@ -126,7 +129,7 @@ async def slash(ack, respond, command, client):
 
             datetime = utc.normalize(
                 dt.datetime.now(timezone).replace(
-                    hour=parsed_command.when.hour,
+                    hour=when.hour,
                     minute=0,
                     second=0,
                     microsecond=0,
@@ -134,9 +137,25 @@ async def slash(ack, respond, command, client):
             )
             time = datetime.time()
 
-            logger.debug(
-                f"User {parsed_command.when=} {timezone=} converted to {time=}"
-            )
+            # Check that we have permission to post to the channel
+            try:
+                await say(
+                    f"<@{user_id}> has started a daily game of Similarium {when_human}"
+                )
+            except SlackApiError as e:
+                response = e.response.data
+                await respond(
+                    ":no_entry_sign: Unable to post to channel. You need to invite"
+                    " @Similarium to this channel: `/invite @Similarium`"
+                )
+                # Report if unknown error
+                error = response.get("error")
+                if error not in ("channel_not_found", "not_in_channel"):
+                    sentry_sdk.capture_exception(e)
+
+                return
+
+            logger.debug(f"User {when=} {timezone=} converted to {time=}")
 
             channel = Channel(
                 id=channel_id,
@@ -164,7 +183,8 @@ async def slash(ack, respond, command, client):
                 stmt = delete(Channel).where(Channel.id == channel.id)
                 await session.execute(stmt)
                 await session.commit()
-        case Manual():
+            await say(f"<@{user_id}> has stopped the daily game of Similarium")
+        case Manual(text=text, blocks=blocks):
             logger.debug("Starting manual game on channel")
             try:
                 await start_game(channel_id)
@@ -182,8 +202,9 @@ async def slash(ack, respond, command, client):
                         " @Similarium to this channel: `/invite @Similarium`"
                     )
                 )
-
-    await respond(text=parsed_command.text, blocks=parsed_command.blocks)
+            await respond(text=text, blocks=blocks)
+        case Help(text=text, blocks=blocks):
+            await respond(text=text, blocks=blocks)
 
 
 async def startup_task(app):
