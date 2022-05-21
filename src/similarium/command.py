@@ -98,7 +98,9 @@ class Help(Command):
                         " daily puzzle at the provided time on the current channel. The"
                         ' time can be something like "9am" or "13:00" for example.\nThe'
                         " time will be based on your timezone.\nThe puzzle will be"
-                        " posted at the start of the hour."
+                        " posted at the start of the hour.\n_Please note that the daily"
+                        " game is posted at the start of every hour, so if you specify"
+                        " 13:45, it will be posted at 13:00_"
                     ),
                 },
                 "fields": [
@@ -127,28 +129,26 @@ class Help(Command):
 
 
 def parse_command(text: str) -> Command:
-    parts = text.split(" ")
-    subcommand = parts[0]
-
-    match subcommand:
-        case "start":
-            if len(parts) < 2:
-                raise ParseException(
-                    ":no_entry_sign: Time missing from start command :no_entry_sign:"
-                )
+    match text.split(" "):
+        case ["start"]:
+            raise ParseException(
+                ":no_entry_sign: Time missing from start command :no_entry_sign:"
+            )
+        case ["start", time, *_]:
             # Try to parse the time
             try:
-                time = parser.parse(parts[1]).time()
+                parsed_time = parser.parse(time).time()
             except parser.ParserError:
                 raise ParseException(
                     "Unable to parse time. Try tomething like 9am or 13:00"
                 )
-            return Start(when=time)
-        case "stop":
+            # TODO: Support minute as well
+            return Start(when=parsed_time.replace(minute=0))
+        case ["stop", *_]:
             return Stop()
-        case "help":
+        case ["help", *_]:
             return Help()
-        case "manual":
+        case ["manual", *_]:
             return Manual()
         case _:
             raise ParseException(":no_entry_sign: Unknown command :no_entry_sign:")
