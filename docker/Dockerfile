@@ -2,8 +2,6 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-EXPOSE 8080
-
 COPY docker/run.sh /app/run.sh
 
 # Used to apply migrations on startup

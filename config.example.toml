@@ -23,6 +23,11 @@ client_secret = "<CLIENT_SECRET>"
 signing_secret = "<SIGNING_SECRET>"
 scopes = ["commands", "users:read", "chat:write"]
 
+[slack.server]
+port = 3000
+host = "127.0.0.1"
+path = "/slack/events"
+
 [sentry]
 dsn = "<SENTRY_DSN>"
 env = "dev"

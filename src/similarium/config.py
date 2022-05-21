@@ -32,6 +32,13 @@ class Logging:
 
 
 @dc.dataclass
+class SlackServer:
+    port: int
+    host: str
+    path: str
+
+
+@dc.dataclass
 class Slack:
     dev_mode: bool
     bot_token: str
@@ -40,6 +47,7 @@ class Slack:
     client_secret: str
     signing_secret: str
     scopes: list[str]
+    server: SlackServer
 
 
 @dc.dataclass
