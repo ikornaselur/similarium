@@ -67,10 +67,10 @@ migrate:
 ##########
 docker_build:
 	@poetry export -E sqlite -f requirements.txt > requirements.txt
-	@docker build -t $(DOCKER_REPO):latest-sqlite .
+	@docker build -f docker/Dockerfile -t $(DOCKER_REPO):latest-sqlite .
 
 	@poetry export -E postgres -f requirements.txt > requirements.txt
-	@docker build -t $(DOCKER_REPO):latest-postgres .
+	@docker build -f docker/Dockerfile -t $(DOCKER_REPO):latest-postgres .
 
 	@rm requirements.txt
 
@@ -88,4 +88,6 @@ docker_run:
 	@docker run \
 		-v "$(shell pwd)"/config.toml:/app/config.toml \
 		-v "$(shell pwd)"/similarium.db:/app/similarium.db \
+		--name similarium \
+		--rm \
 		$(DOCKER_REPO):latest-sqlite
