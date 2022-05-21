@@ -44,6 +44,10 @@ class NotInChannel(SlackException):
     pass
 
 
+class AccountInactive(SlackException):
+    pass
+
+
 class GameNotRegistered(SlackException):
     pass
 

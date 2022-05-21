@@ -1,7 +1,12 @@
 from slack_sdk.errors import SlackApiError
 
 from similarium import db
-from similarium.exceptions import ChannelNotFound, GameNotRegistered, NotInChannel
+from similarium.exceptions import (
+    AccountInactive,
+    ChannelNotFound,
+    GameNotRegistered,
+    NotInChannel,
+)
 from similarium.logging import logger
 from similarium.models import Channel, Game
 from similarium.models.similarity_range import SimilarityRange
@@ -84,6 +89,9 @@ async def start_game(channel_id: str):
             case "not_in_channel":
                 # Needs to be invited
                 raise NotInChannel()
+            case "account_inactive":
+                # Similarium user has been removed from the team
+                raise AccountInactive()
         return
 
     game.thread_ts = resp["ts"]

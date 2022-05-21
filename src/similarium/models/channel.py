@@ -16,6 +16,7 @@ class Channel(Base):
     team_id = sa.Column(sa.Text, nullable=False)
     # The hour to post the daily puzzle, on UTC+0
     hour = sa.Column(sa.Integer, nullable=False)
+    active = sa.Column(sa.Boolean, default=True)
 
     @classmethod
     async def by_id(
@@ -27,7 +28,9 @@ class Channel(Base):
 
     @classmethod
     async def by_hour(cls, hour: int, /, *, session: AsyncSession) -> list[Channel]:
-        return (await session.scalars(select(cls).where(cls.hour == hour))).all()
+        return (
+            await session.scalars(select(cls).where(cls.hour == hour, cls.active))
+        ).all()
 
     def __repr__(self) -> str:
         return f"<Channel (id={self.id})>"
