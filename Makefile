@@ -65,6 +65,22 @@ migrate:
 ##########
 # Docker #
 ##########
+docker_build_dev:
+	@poetry export -E sqlite -E postgres -f requirements.txt > requirements.txt
+	@docker build \
+		-f docker/Dockerfile \
+		-t $(DOCKER_REPO):latest-dev \
+		.
+	@rm requirements.txt
+
+docker_run: docker_build_dev
+	@docker run \
+		-v "$(shell pwd)"/config.toml:/app/config.toml \
+		-v "$(shell pwd)"/similarium.db:/app/similarium.db \
+		--name similarium \
+		--rm \
+		$(DOCKER_REPO):latest-dev
+
 docker_build_and_push:
 	@poetry export -E sqlite -E postgres -f requirements.txt > requirements.txt
 	@docker buildx build \
@@ -75,11 +91,3 @@ docker_build_and_push:
 		-t $(DOCKER_REPO):latest \
 		.
 	@rm requirements.txt
-
-docker_run:
-	@docker run \
-		-v config.toml:/app/config.toml \
-		-v similarium.db:/app/similarium.db \
-		--name similarium \
-		--rm \
-		$(DOCKER_REPO):latest
