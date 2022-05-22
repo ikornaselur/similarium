@@ -65,29 +65,29 @@ migrate:
 ##########
 # Docker #
 ##########
-docker_build:
-	@poetry export -E sqlite -f requirements.txt > requirements.txt
-	@docker build -f docker/Dockerfile -t $(DOCKER_REPO):latest-sqlite .
-
-	@poetry export -E postgres -f requirements.txt > requirements.txt
-	@docker build -f docker/Dockerfile -t $(DOCKER_REPO):latest-postgres .
-
+docker_build_dev:
+	@poetry export -E sqlite -E postgres -f requirements.txt > requirements.txt
+	@docker build \
+		-f docker/Dockerfile \
+		-t $(DOCKER_REPO):latest-dev \
+		.
 	@rm requirements.txt
 
-docker_tag_version: docker_build
-	@docker tag $(DOCKER_REPO):latest-sqlite $(DOCKER_REPO):$(VERSION)-sqlite
-	@docker tag $(DOCKER_REPO):latest-postgres $(DOCKER_REPO):$(VERSION)-postgres
-
-docker_push: docker_tag_version
-	@docker push $(DOCKER_REPO):latest-sqlite
-	@docker push $(DOCKER_REPO):latest-postgres
-	@docker push $(DOCKER_REPO):$(VERSION)-sqlite
-	@docker push $(DOCKER_REPO):$(VERSION)-postgres
-
-docker_run:
+docker_run: docker_build_dev
 	@docker run \
 		-v "$(shell pwd)"/config.toml:/app/config.toml \
 		-v "$(shell pwd)"/similarium.db:/app/similarium.db \
 		--name similarium \
 		--rm \
-		$(DOCKER_REPO):latest-sqlite
+		$(DOCKER_REPO):latest-dev
+
+docker_build_and_push:
+	@poetry export -E sqlite -E postgres -f requirements.txt > requirements.txt
+	@docker buildx build \
+		--platform "linux/amd64,linux/arm64,linux/386,linux/arm/v7" \
+		-f docker/Dockerfile \
+		--push \
+		-t $(DOCKER_REPO):$(VERSION) \
+		-t $(DOCKER_REPO):latest \
+		.
+	@rm requirements.txt

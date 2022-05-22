@@ -1,8 +1,8 @@
-version: "3.9"
+version: "3"
 
 services:
   similarium:
-    image: absalon/similarium:1.1.1-sqlite
+    image: absalon/similarium:1.1.3
     volumes:
       - ../config.toml:/app/config.toml
       - ../similarium.db:/app/similarium.db
