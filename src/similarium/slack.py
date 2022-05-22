@@ -73,6 +73,7 @@ class DividerBlock(TypedDict):
 class ElementBlock(TypedDict):
     type: Literal["plain_text_input"]
     action_id: str
+    min_length: int
 
 
 class LabelBlock(TypedDict):
@@ -149,6 +150,7 @@ class SlackGame:
             "element": {
                 "type": "plain_text_input",
                 "action_id": self.input_action_id,
+                "min_length": 2,
             },
             "label": {
                 "type": "plain_text",

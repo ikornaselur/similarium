@@ -74,6 +74,7 @@ async def start_game(channel_id: str):
                     "element": {
                         "type": "plain_text_input",
                         "action_id": "submit-guess",
+                        "min_length": 2,
                     },
                     "label": {"type": "plain_text", "text": "Guess", "emoji": True},
                 },
