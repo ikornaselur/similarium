@@ -1,5 +1,5 @@
-from importlib import metadata
+from importlib.metadata import version
 
-__version__ = metadata.version(__package__)
+__version__ = version(__package__)
 
-del metadata  # optional, avoids polluting the results of dir(__package__)
+del version  # optional, avoids polluting the results of dir(__package__)
