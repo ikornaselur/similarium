@@ -12,7 +12,7 @@ from slack_bolt.app.async_server import AsyncSlackAppServer
 from slack_sdk.errors import SlackApiError
 from sqlalchemy.sql.expression import delete
 
-from similarium import db
+from similarium import __version__, db
 from similarium.command import Help, Manual, Start, Stop, parse_command
 from similarium.config import config
 from similarium.exceptions import (
@@ -33,80 +33,85 @@ REGEX = re.compile(r"^(?P<guess>[A-Za-z]+)$")
 
 sentry_sdk.init(
     dsn=config.sentry.dsn,
+    release=f"similarium@{__version__}",
     environment=config.sentry.env,
     integrations=[AioHttpIntegration()],
+    traces_sample_rate=1.0,
 )
 
 
 @app.action("submit-guess")
 async def handle_some_action(ack, respond, body, client):
-    await ack()
+    with sentry_sdk.start_transaction(op="task", name="Submit guess"):
+        await ack()
 
-    value = body["state"]["values"]["guess-input"]["submit-guess"]["value"]
-    logger.info(f"{value=}")
+        value = body["state"]["values"]["guess-input"]["submit-guess"]["value"]
+        logger.info(f"{value=}")
 
-    message_ts = body["container"]["message_ts"]
-    channel = body["container"]["channel_id"]
-    team_id = body["user"]["team_id"]
+        message_ts = body["container"]["message_ts"]
+        channel = body["container"]["channel_id"]
+        team_id = body["user"]["team_id"]
 
-    async def _ephemeral(text: str) -> None:
-        await client.chat_postEphemeral(
-            token=get_bot_token_for_team(team_id),
-            text=text,
-            channel=channel,
-            user=user_id,
-        )
-
-    async with db.session() as session:
-        puzzle_number = get_puzzle_number()
-        game = await Game.get(
-            session=session,
-            channel_id=channel,
-            thread_ts=message_ts,
-            puzzle_number=puzzle_number,
-        )
-        if game is None:
-            raise NotFound(
-                f"Game not found for {channel=} {message_ts=} {puzzle_number=}"
+        async def _ephemeral(text: str) -> None:
+            await client.chat_postEphemeral(
+                token=get_bot_token_for_team(team_id),
+                text=text,
+                channel=channel,
+                user=user_id,
             )
 
-        if value is not None and (match := REGEX.match(value.strip())):
-            word = match.group("guess").lower()
-            user_id = body["user"]["id"]
-
-            user = await User.by_id(user_id, session=session)
-            if user is None:
-                user_info = await client.users_info(user=user_id)
-                user_data = user_info.data["user"]
-                user = User(
-                    id=user_id,
-                    profile_photo=user_data["profile"]["image_24"],
-                    username=user_data["name"],
+        async with db.session() as session:
+            puzzle_number = get_puzzle_number()
+            game = await Game.get(
+                session=session,
+                channel_id=channel,
+                thread_ts=message_ts,
+                puzzle_number=puzzle_number,
+            )
+            if game is None:
+                raise NotFound(
+                    f"Game not found for {channel=} {message_ts=} {puzzle_number=}"
                 )
-                session.add(user)
-                await session.commit()
 
-            try:
-                guess = await game.add_guess(
-                    word=word, user_id=user_id, session=session
-                )
-                await session.commit()
-                if guess.is_secret:
-                    # Let the user know that it was the secret
-                    await _ephemeral(
-                        f":tada: You found the secret! It was *{word}* :tada:"
+            if value is not None and (match := REGEX.match(value.strip())):
+                word = match.group("guess").lower()
+                user_id = body["user"]["id"]
+
+                user = await User.by_id(user_id, session=session)
+                if user is None:
+                    user_info = await client.users_info(user=user_id)
+                    user_data = user_info.data["user"]
+                    user = User(
+                        id=user_id,
+                        profile_photo=user_data["profile"]["image_24"],
+                        username=user_data["name"],
                     )
-            except UserAlreadyWon:
-                await _ephemeral(
-                    ":warning: You already got the winning word, you can't make"
-                    " any further guesses :warning:"
-                )
-                return
-            except InvalidWord:
-                await _ephemeral(f':warning: *"{word}" is not a valid word!* :warning:')
-                return
+                    session.add(user)
+                    await session.commit()
 
-    await update_game(game)
+                try:
+                    guess = await game.add_guess(
+                        word=word, user_id=user_id, session=session
+                    )
+                    await session.commit()
+                    if guess.is_secret:
+                        # Let the user know that it was the secret
+                        await _ephemeral(
+                            f":tada: You found the secret! It was *{word}* :tada:"
+                        )
+                except UserAlreadyWon:
+                    await _ephemeral(
+                        ":warning: You already got the winning word, you can't make"
+                        " any further guesses :warning:"
+                    )
+                    return
+                except InvalidWord:
+                    await _ephemeral(
+                        f':warning: *"{word}" is not a valid word!* :warning:'
+                    )
+                    return
+
+        await update_game(game)
 
 
 @app.command("/similarium")
