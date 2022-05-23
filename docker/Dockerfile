@@ -5,8 +5,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends gcc build-essen
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-COPY requirements.txt requirements.txt
-
 RUN pip install poetry==1.1.13
 
 COPY pyproject.toml pyproject.toml
