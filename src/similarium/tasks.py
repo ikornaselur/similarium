@@ -15,19 +15,20 @@ from similarium.utils import get_seconds_left_of_hour
 async def action(
     channels: list[Channel], func: Callable[[str], Awaitable[None]]
 ) -> None:
-    results = await asyncio.gather(
-        *[func(channel.id) for channel in channels if channel.active],
-        return_exceptions=True,
-    )
-    for channel, exc in filter(lambda _: bool(_[1]), zip(channels, results)):
-        if isinstance(exc, AccountInactive):
-            # Account is inactive on channel, mark as such
-            async with db.session() as session:
-                channel.active = False  # type: ignore
-                await session.commit()
-        else:
-            # Unexpected error
-            sentry_sdk.capture_exception(exc)
+    with sentry_sdk.start_transaction(op="task", name=f"Hourly task: {func.__name__}"):
+        results = await asyncio.gather(
+            *[func(channel.id) for channel in channels if channel.active],
+            return_exceptions=True,
+        )
+        for channel, exc in filter(lambda _: bool(_[1]), zip(channels, results)):
+            if isinstance(exc, AccountInactive):
+                # Account is inactive on channel, mark as such
+                async with db.session() as session:
+                    channel.active = False  # type: ignore
+                    await session.commit()
+            else:
+                # Unexpected error
+                sentry_sdk.capture_exception(exc)
 
 
 async def hourly_game_creator() -> None:
