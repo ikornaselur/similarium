@@ -66,12 +66,10 @@ migrate:
 # Docker #
 ##########
 docker_build_dev:
-	@poetry export -E sqlite -E postgres -f requirements.txt > requirements.txt
 	@docker build \
 		-f docker/Dockerfile \
 		-t $(DOCKER_REPO):latest-dev \
 		.
-	@rm requirements.txt
 
 docker_run: docker_build_dev
 	@docker run \
@@ -82,7 +80,6 @@ docker_run: docker_build_dev
 		$(DOCKER_REPO):latest-dev
 
 docker_build_and_push:
-	@poetry export -E sqlite -E postgres -f requirements.txt > requirements.txt
 	@docker buildx build \
 		--platform "linux/amd64,linux/arm64,linux/386,linux/arm/v7" \
 		-f docker/Dockerfile \
@@ -90,4 +87,3 @@ docker_build_and_push:
 		-t $(DOCKER_REPO):$(VERSION) \
 		-t $(DOCKER_REPO):latest \
 		.
-	@rm requirements.txt
