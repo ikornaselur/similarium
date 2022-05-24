@@ -1,8 +1,9 @@
 import datetime as dt
+from unittest import mock
 
 import pytest
 
-from similarium.command import Help, Start, Stop, parse_command
+from similarium.command import Help, Manual, Start, Stop, parse_command
 from similarium.exceptions import ParseException
 
 
@@ -80,3 +81,16 @@ def test_parse_command_start_when_human() -> None:
     assert Start(dt.time(21, 0)).when_human == "at night at 21:00"
     assert Start(dt.time(22, 0)).when_human == "at night at 22:00"
     assert Start(dt.time(23, 0)).when_human == "at night at 23:00"
+
+
+def test_parse_command_only_parses_manual_if_slack_dev_mode() -> None:
+    text = "manual start"
+
+    with mock.patch("similarium.command.config.slack.dev_mode", True):
+        command = parse_command(text)
+        assert isinstance(command, Manual)
+        assert command.action == "start"
+
+    with mock.patch("similarium.command.config.slack.dev_mode", False):
+        with pytest.raises(ParseException):
+            parse_command(text)

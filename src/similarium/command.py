@@ -135,12 +135,12 @@ def parse_command(text: str) -> Command:
 
     When running in slack.dev_mode, additional debug commands are supported
     """
-    match (text.split(" "), config.slack.dev_mode):
-        case (["start"], _):
+    match text.split(" "):
+        case ["start"]:
             raise ParseException(
                 ":no_entry_sign: Time missing from start command :no_entry_sign:"
             )
-        case (["start", time, *_], _):
+        case ["start", time, *_]:
             # Try to parse the time
             try:
                 parsed_time = parser.parse(time).time()
@@ -150,13 +150,13 @@ def parse_command(text: str) -> Command:
                 )
             # TODO: Support minute as well
             return Start(when=parsed_time.replace(minute=0))
-        case (["stop", *_], _):
+        case ["stop", *_]:
             return Stop()
-        case (["help", *_], _):
+        case ["help", *_]:
             return Help()
-        case (["manual", "start"], True):
+        case ["manual", "start"] if config.slack.dev_mode:
             return Manual(action="start")
-        case (["manual", "end"], True):
+        case ["manual", "end"] if config.slack.dev_mode:
             return Manual(action="end")
         case _:
             raise ParseException(":no_entry_sign: Unknown command :no_entry_sign:")
