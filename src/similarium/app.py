@@ -7,6 +7,7 @@ import pytz
 import sentry_sdk
 from aiohttp import web
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
+from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 from slack_bolt.adapter.socket_mode.aiohttp import AsyncSocketModeHandler
 from slack_bolt.app.async_server import AsyncSlackAppServer
 from slack_sdk.errors import SlackApiError
@@ -35,7 +36,7 @@ sentry_sdk.init(
     dsn=config.sentry.dsn,
     release=f"similarium@{__version__}",
     environment=config.sentry.env,
-    integrations=[AioHttpIntegration()],
+    integrations=[AioHttpIntegration(), SqlalchemyIntegration()],
     traces_sample_rate=1.0,
 )
 
