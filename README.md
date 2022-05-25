@@ -26,10 +26,10 @@ relevant values
 
 The project expects an english word list and a banned word list to work with.
 
-1. `make wordlist`: Download the default wordlists
-2. `make create_db_tables`: Ensure SQLite database is initialised with relevant
+1. `make wordlists`: Download the default wordlists
+2. `make init_db`: Ensure the database is initialised with relevant
    tables
-3. `make prepare_database`: Store main vectors + hints in database
+3. `make prepare_data`: Store main vectors + hints in database
 
 you can also run `make all` to run the two steps above in a row
 
