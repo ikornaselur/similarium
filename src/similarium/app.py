@@ -1,5 +1,6 @@
 import asyncio
 import datetime as dt
+import random
 import re
 from asyncio.exceptions import CancelledError
 
@@ -32,6 +33,25 @@ from similarium.utils import get_puzzle_number
 
 REGEX = re.compile(r"^(?P<guess>[A-Za-z]+)$")
 
+CELEBRATE_EMOJIS = [
+    ":sparkles:",
+    ":medal:",
+    ":trophy:",
+    ":partying_face:",
+    ":tada:",
+    ":champagne:",
+    ":confetti_ball:",
+    ":dancer:",
+    ":man_dancing:",
+    ":star2:",
+    ":star-struck:",
+    ":clap:",
+    ":raised_hands:",
+    ":muscle:",
+    ":mechanical_arm:",
+]
+
+
 sentry_sdk.init(
     dsn=config.sentry.dsn,
     release=f"similarium@{__version__}",
@@ -42,7 +62,7 @@ sentry_sdk.init(
 
 
 @app.action("submit-guess")
-async def handle_some_action(ack, respond, body, client):
+async def handle_some_action(ack, say, body, client):
     with sentry_sdk.start_transaction(op="task", name="Submit guess"):
         await ack()
 
@@ -98,6 +118,12 @@ async def handle_some_action(ack, respond, body, client):
                         # Let the user know that it was the secret
                         await _ephemeral(
                             f":tada: You found the secret! It was *{word}* :tada:"
+                        )
+                        # Also post on the channel to celebrate!
+                        celebrate_emoji = random.choice(CELEBRATE_EMOJIS)
+                        await say(
+                            f"{celebrate_emoji} <@{user_id}> has just found the "
+                            f"secret of the day! {celebrate_emoji}"
                         )
                 except UserAlreadyWon:
                     await _ephemeral(
