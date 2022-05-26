@@ -71,16 +71,14 @@ class Game(Base):
         *,
         channel_id: str,
         thread_ts: str,
-        puzzle_number: int,
         session: AsyncSession,
     ) -> Optional[Game]:
-        logger.debug(f"Getting Game: {channel_id=} {thread_ts=} {puzzle_number=}")
+        logger.debug(f"Getting Game: {channel_id=} {thread_ts=}")
         stmt = (
             select(cls)
             .where(
                 cls.channel_id == channel_id,
                 cls.thread_ts == thread_ts,
-                cls.puzzle_number == puzzle_number,
             )
             .options(selectinload(cls.guesses))
             .options(selectinload(cls.similarity_range))

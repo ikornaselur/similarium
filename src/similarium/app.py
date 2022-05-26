@@ -67,7 +67,6 @@ async def handle_some_action(ack, respond, body, client):
                 session=session,
                 channel_id=channel,
                 thread_ts=message_ts,
-                puzzle_number=puzzle_number,
             )
             if game is None:
                 raise NotFound(
