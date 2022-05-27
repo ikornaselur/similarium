@@ -28,6 +28,7 @@ from similarium.game import end_game, start_game, update_game
 from similarium.logging import configure_logger, logger, web_logger
 from similarium.models import Channel, Game, User
 from similarium.slack import app, get_bot_token_for_team
+from similarium.spellings import americanize
 from similarium.tasks import hourly_game_creator
 from similarium.utils import get_puzzle_number
 
@@ -94,7 +95,7 @@ async def handle_some_action(ack, say, body, client):
                 )
 
             if value is not None and (match := REGEX.match(value.strip())):
-                word = match.group("guess").lower()
+                word = americanize(match.group("guess").lower())
                 user_id = body["user"]["id"]
 
                 user = await User.by_id(user_id, session=session)
