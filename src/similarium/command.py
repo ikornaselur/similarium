@@ -3,6 +3,7 @@ from typing import Optional
 
 from dateutil import parser
 
+from similarium import __version__
 from similarium.config import config
 from similarium.exceptions import ParseException
 
@@ -122,6 +123,17 @@ class Help(Command):
                 "fields": [
                     {"type": "mrkdwn", "text": "Stop a daily puzzle"},
                     {"type": "mrkdwn", "text": "`/similarium stop`"},
+                ],
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*About*",
+                },
+                "fields": [
+                    {"type": "mrkdwn", "text": "Version"},
+                    {"type": "mrkdwn", "text": __version__},
                 ],
             },
         ]
