@@ -25,7 +25,7 @@ class Guess(Base):
 
     # Milliseconds since start of previous day UTC, only used for ordering
     # guesses in a game. Previous day is used to deal with time zones
-    updated = sa.Column(sa.Integer, nullable=False)
+    updated = sa.Column(sa.BigInteger, nullable=False)
 
     user_id = sa.Column(sa.Text, sa.ForeignKey("user.id"), nullable=False)
     user = relationship("User", lazy="joined", foreign_keys=[user_id])
