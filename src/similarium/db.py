@@ -9,5 +9,5 @@ from similarium.config import config
 
 Base = declarative_base()
 
-engine = create_async_engine(config.database.uri, future=True)
+engine = create_async_engine(config.database.uri, future=True, pool_pre_ping=True)
 session = sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)
