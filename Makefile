@@ -28,7 +28,7 @@ postgres:
 # Lint #
 ########
 lint:
-	@poetry run flake8 scripts src
+	@poetry run ruff scripts src
 
 pyright:
 	@poetry run pyright scripts src
