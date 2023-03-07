@@ -84,7 +84,8 @@ docker_run: docker_build_dev
 docker_build_and_push:
 	@poetry export -E sqlite -E postgres -f requirements.txt > requirements.txt
 	@docker buildx build \
-		--platform "linux/amd64,linux/arm64,linux/386,linux/arm/v7" \
+		#--platform "linux/amd64,linux/arm64,linux/386,linux/arm/v7" \
+		--platform "linux/amd64" \
 		--cache-from type=registry,ref=$(DOCKER_REPO):cache \
 		--cache-to   type=registry,ref=$(DOCKER_REPO):cache,mode=max \
 		-f docker/Dockerfile \
