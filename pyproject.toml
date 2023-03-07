@@ -33,7 +33,7 @@ pdbpp = "^0.10.3"
 pytest = "^7.1.1"
 pytest-clarity = "^1.0.1"
 rich = "^12.2.0"
-ipython = "^8.2.0"
+ipython = "^8.10.0"
 sqlalchemy-stubs = "^0.4"
 pytest-asyncio = "^0.18.3"
 
