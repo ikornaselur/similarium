@@ -66,7 +66,7 @@ include = ["src", "tests"]
 
 [tool.ruff]
 ignore = ["A003"]
-line-length = 88
+line-length = 120
 select = [
     "A",
     "E",

@@ -13,6 +13,23 @@ if TYPE_CHECKING:
 Vector = list[float]
 
 BASE_DATE = dt.datetime(2022, 5, 6, tzinfo=dt.timezone.utc)
+CELEBRATE_EMOJIS = [
+    ":sparkles:",
+    ":medal:",
+    ":trophy:",
+    ":partying_face:",
+    ":tada:",
+    ":champagne:",
+    ":confetti_ball:",
+    ":dancer:",
+    ":man_dancing:",
+    ":star2:",
+    ":star-struck:",
+    ":clap:",
+    ":raised_hands:",
+    ":muscle:",
+    ":mechanical_arm:",
+]
 
 
 def dot(A: Vector, B: Vector) -> float:
