@@ -30,27 +30,9 @@ from similarium.models import Channel, Game, User
 from similarium.slack import app, get_bot_token_for_team
 from similarium.spellings import americanize
 from similarium.tasks import hourly_game_creator
-from similarium.utils import get_puzzle_number
+from similarium.utils import CELEBRATE_EMOJIS, get_puzzle_number
 
 REGEX = re.compile(r"^(?P<guess>[A-Za-z]+)$")
-
-CELEBRATE_EMOJIS = [
-    ":sparkles:",
-    ":medal:",
-    ":trophy:",
-    ":partying_face:",
-    ":tada:",
-    ":champagne:",
-    ":confetti_ball:",
-    ":dancer:",
-    ":man_dancing:",
-    ":star2:",
-    ":star-struck:",
-    ":clap:",
-    ":raised_hands:",
-    ":muscle:",
-    ":mechanical_arm:",
-]
 
 
 sentry_sdk.init(
@@ -128,6 +110,10 @@ async def handle_submit_guess(ack, say, body, client):
                         word=word, user_id=user_id, session=session
                     )
                     await session.commit()
+                    if celebration := await guess.get_celebration(session=session):
+                        # It's worth celebrating this guess!
+                        # This is done for the first words that breach top 1000, top 100 and top 10
+                        await say(celebration)
                     if guess.is_secret:
                         # Let the user know that it was the secret
                         await _ephemeral(
