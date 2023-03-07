@@ -4,7 +4,7 @@ import datetime as dt
 
 import pytz
 import sqlalchemy as sa
-from IPython import embed
+from IPython.terminal.embed import embed
 from sqlalchemy.future import select
 
 from similarium import db

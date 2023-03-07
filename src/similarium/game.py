@@ -95,7 +95,7 @@ async def start_game(channel_id: str):
                 raise AccountInactive()
         return
 
-    game.thread_ts = resp["ts"]
+    game.thread_ts = resp["ts"]  # type: ignore
 
     async with db.session() as s:
         s.add(game)

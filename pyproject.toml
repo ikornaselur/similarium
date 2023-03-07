@@ -28,11 +28,6 @@ alembic = "^1.7.7"
 isort = "^5.10.1"
 black = "^22.3.0"
 pyright = "^1.1.237"
-flake8 = "^4.0.1"
-flake8-builtins = "^1.5.3"
-flake8-isort = "^4.1.1"
-flake8-bugbear = "^22.3.23"
-flake8-black = "^0.3.2"
 ipdb = "^0.13.9"
 pdbpp = "^0.10.3"
 pytest = "^7.1.1"
@@ -46,6 +41,9 @@ pytest-asyncio = "^0.18.3"
 dump = ["numpy", "gensim", "scipy"]
 sqlite = ["aiosqlite"]
 postgres = ["asyncpg"]
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.0.254"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -65,3 +63,13 @@ target-version = ["py310"]
 [tool.pyright]
 pythonVersion = "3.10"
 include = ["src", "tests"]
+
+[tool.ruff]
+ignore = ["A003"]
+line-length = 88
+select = [
+    "A",
+    "E",
+    "F",
+    "W",
+]
