@@ -63,7 +63,7 @@ sentry_sdk.init(
 
 
 @app.action("submit-guess")
-async def handle_some_action(ack, say, body, client):
+async def handle_submit_guess(ack, say, body, client):
     with sentry_sdk.start_transaction(op="task", name="Submit guess"):
         await ack()
 
@@ -109,6 +109,19 @@ async def handle_some_action(ack, say, body, client):
                     )
                     session.add(user)
                     await session.commit()
+                elif not await game.has_guessed(user.id, session=session):
+                    logger.debug("First time this user is guessing in game")
+                    # First time they guess in the current game, let's check if
+                    # they've updated their profile
+                    user_info = await client.users_info(user=user_id)
+                    user_data = user_info.data["user"]
+
+                    profile_photo = user_data["profile"]["image_24"]
+
+                    if user.profile_photo != profile_photo:
+                        user.profile_photo = profile_photo
+                        session.add(user)
+                        await session.commit()
 
                 try:
                     guess = await game.add_guess(

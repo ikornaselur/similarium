@@ -219,6 +219,19 @@ class Game(Base):
         result = await session.execute(stmt)
         return result.scalars().all()
 
+    async def has_guessed(self, user_id: str, /, *, session: AsyncSession) -> bool:
+        """Check if a user has guessed in this game already"""
+
+        from .guess import Guess
+
+        stmt = (
+            select(Guess)
+            .where(Guess.game_id == self.id, Guess.user_id == user_id)
+            .limit(1)
+        )
+        result = await session.execute(stmt)
+        return result.scalar() is not None
+
     def __repr__(self) -> str:
         return (
             f"<Game (id={self.id} puzzle_number={self.puzzle_number} "
