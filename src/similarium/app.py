@@ -12,7 +12,6 @@ from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 from slack_bolt.adapter.socket_mode.aiohttp import AsyncSocketModeHandler
 from slack_bolt.app.async_server import AsyncSlackAppServer
 from slack_sdk.errors import SlackApiError
-from sqlalchemy.sql.expression import delete
 
 from similarium import __version__, db
 from similarium.command import Help, Manual, Start, Stop, parse_command
@@ -161,7 +160,7 @@ async def slash(ack, respond, say, command, client):
             # Check if there is already a game registered for the channel
             async with db.session() as session:
                 channel = await Channel.by_id(channel_id, session=session)
-            if channel is not None:
+            if channel is not None and channel.active:
                 logger.debug(f"Game was already registered for {channel_id=}")
                 await respond(
                     text=(
@@ -209,12 +208,17 @@ async def slash(ack, respond, say, command, client):
 
             logger.debug(f"User {when=} {timezone=} converted to {time=}")
 
-            channel = Channel(
-                id=channel_id,
-                team_id=team_id,
-                hour=time.hour,
-            )
-            logger.debug(f"Adding Channel {channel_id=}")
+            if channel is None:
+                logger.debug(f"Creating new channel for {channel_id=}")
+                channel = Channel(
+                    id=channel_id,
+                    team_id=team_id,
+                    hour=time.hour,
+                )
+            else:
+                logger.debug(f"Updating existing channel for {channel_id=}")
+                channel.hour = time.hour
+                channel.active = True
             async with db.session() as session:
                 session.add(channel)
                 await session.commit()
@@ -230,11 +234,13 @@ async def slash(ack, respond, say, command, client):
                     )
                 )
                 return
-            logger.debug(f"Deleting {channel}")
+            logger.debug(f"Setting {channel} as inactive")
             async with db.session() as session:
-                stmt = delete(Channel).where(Channel.id == channel.id)
-                await session.execute(stmt)
-                await session.commit()
+                channel = await Channel.by_id(channel_id, session=session)
+                if channel:
+                    channel.active = False
+                    session.add(channel)
+                    await session.commit()
             await say(f"<@{user_id}> has stopped the daily game of Similarium")
         case Help(text=text, blocks=blocks):
             await respond(text=text, blocks=blocks)
