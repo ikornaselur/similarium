@@ -217,8 +217,8 @@ async def slash(ack, respond, say, command, client):
                 )
             else:
                 logger.debug(f"Updating existing channel for {channel_id=}")
-                channel.hour = time.hour
-                channel.active = True
+                channel.hour = time.hour  # pyright: ignore
+                channel.active = True  # pyright: ignore
             async with db.session() as session:
                 session.add(channel)
                 await session.commit()
@@ -238,7 +238,7 @@ async def slash(ack, respond, say, command, client):
             async with db.session() as session:
                 channel = await Channel.by_id(channel_id, session=session)
                 if channel:
-                    channel.active = False
+                    channel.active = False  # pyright: ignore
                     session.add(channel)
                     await session.commit()
             await say(f"<@{user_id}> has stopped the daily game of Similarium")
