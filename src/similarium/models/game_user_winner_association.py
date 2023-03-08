@@ -10,10 +10,13 @@ class GameUserWinnerAssociation(Base):
     game_id = sa.Column(sa.ForeignKey("game.id"), primary_key=True)
     game = relationship("Game", back_populates="winners")
 
+    created = sa.Column(sa.BigInteger, nullable=False)
+
     user_id = sa.Column(sa.ForeignKey("user.id"), primary_key=True)
     user = relationship("User")
 
     guess_idx = sa.Column(sa.Integer, nullable=False)
+
 
     def __repr__(self) -> str:
         game = self.game_id
