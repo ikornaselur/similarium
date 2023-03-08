@@ -33,7 +33,7 @@ class Game(Base):
     channel = relationship("Channel", backref="games", lazy="joined")
     guesses = relationship("Guess", back_populates="game", lazy="joined")
     winners = relationship(
-        "GameUserWinnerAssociation", order_by="GameUserWinnerAssociation.guess_idx"
+        "GameUserWinnerAssociation", order_by="GameUserWinnerAssociation.created"
     )
 
     similarity_range = relationship(
@@ -231,6 +231,32 @@ class Game(Base):
         )
         result = await session.execute(stmt)
         return result.scalar() is not None
+
+    def get_winners_messages(self) -> list[str]:
+        winners = []
+        for idx, winner in enumerate(self.winners):
+            match idx:
+                case 0:
+                    # All wins, except the first, have to have the guess count
+                    # reduced by one, as the first win is not revealed to
+                    # others
+                    reduction = 0
+                    medal = ":first_place_medal: "
+                case 1:
+                    reduction = 1
+                    medal = ":second_place_medal: "
+                case 2:
+                    reduction = 1
+                    medal = ":third_place_medal: "
+                case _:
+                    reduction = 1
+                    medal = ""
+
+            guess_num = winner.guess_idx - reduction
+            winners.append(
+                f"{medal}<@{winner.user_id}> got the secret on guess {guess_num}!"
+            )
+        return winners
 
     def __repr__(self) -> str:
         return (
