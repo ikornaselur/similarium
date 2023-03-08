@@ -171,10 +171,8 @@ class SlackGame:
     async def finished(
         self, *, session: AsyncSession
     ) -> Optional[MarkdownSectionBlock]:
-        winners = [
-            f"<@{winner.user_id}> found the secret on guess {winner.guess_idx}"
-            for winner in self._game.winners
-        ]
+        winners = self._game.get_winners_messages()
+
         secret_found = len(winners) > 0
 
         if self._game.active and not secret_found:

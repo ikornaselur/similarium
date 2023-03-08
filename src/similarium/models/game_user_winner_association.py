@@ -2,6 +2,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import relationship
 
 from similarium.db import Base
+from similarium.utils import timestamp_ms
 
 
 class GameUserWinnerAssociation(Base):
@@ -9,6 +10,8 @@ class GameUserWinnerAssociation(Base):
 
     game_id = sa.Column(sa.ForeignKey("game.id"), primary_key=True)
     game = relationship("Game", back_populates="winners")
+
+    created = sa.Column(sa.BigInteger, nullable=False, default=timestamp_ms)
 
     user_id = sa.Column(sa.ForeignKey("user.id"), primary_key=True)
     user = relationship("User")
