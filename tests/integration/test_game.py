@@ -109,17 +109,9 @@ async def test_game_add_guess_secret_adds_user_to_winner(
 
 
 async def test_game_add_guess_secret_adds_second_user_to_winner(
-    db, game_id: int, user_id: str
+    db, game_id: int, user_id: str, user_id_2: str,
 ) -> None:
     async with db.session() as session:
-        second_user = User(
-            id="user_y",
-            username="similarium-player",
-            profile_photo="http://example.com/profile.jpg",
-        )
-        session.add(second_user)
-        await session.commit()
-
         game = await Game.by_id(game_id, session=session)
         assert game is not None
 
@@ -127,7 +119,7 @@ async def test_game_add_guess_secret_adds_second_user_to_winner(
         assert user is not None
 
         assert user not in game.winners
-        assert second_user not in game.winners
+        assert user_id_2 not in game.winners
 
         await game.add_guess(session=session, word="cherries", user_id=user_id)
         await session.commit()
@@ -137,7 +129,7 @@ async def test_game_add_guess_secret_adds_second_user_to_winner(
 
         assert len(game.winners) == 1
 
-        await game.add_guess(session=session, word=game.secret, user_id=second_user.id)
+        await game.add_guess(session=session, word=game.secret, user_id=user_id_2)
         await session.commit()
 
         assert len(game.winners) == 2
@@ -152,7 +144,7 @@ async def test_game_add_guess_secret_adds_second_user_to_winner(
         winner: GameUserWinnerAssociation = game.winners[1]
 
         assert winner.game_id == game_id
-        assert winner.user_id == second_user.id
+        assert winner.user_id == user_id_2
 
         assert winner.guess_idx == 3
 
