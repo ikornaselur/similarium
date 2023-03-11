@@ -47,8 +47,14 @@ sentry_sdk.init(
 async def handle_submit_guess(ack, say, body, client):
     with sentry_sdk.start_transaction(op="task", name="Submit guess"):
         await ack()
+        if (
+            not len(body.get("actions", []))
+            or body["actions"][0].get("action_id") != "submit-guess"
+        ):
+            logger.error("Unable to get geuss from submission")
+            return
+        value = body["actions"][0]["value"]
 
-        value = body["state"]["values"]["guess-input"]["submit-guess"]["value"]
         logger.info(f"{value=}")
 
         message_ts = body["container"]["message_ts"]
