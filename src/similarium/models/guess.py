@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import random
 from typing import TYPE_CHECKING, Optional
 
 import sqlalchemy as sa
@@ -8,10 +7,11 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import relationship, selectinload
 
+from similarium.celebration import CelebrationType, get_celebration_message
 from similarium.config import config
 from similarium.db import Base
 from similarium.logging import logger
-from similarium.utils import CELEBRATE_EMOJIS, timestamp_ms
+from similarium.utils import timestamp_ms
 
 if TYPE_CHECKING:
     from similarium.models import Game
@@ -111,7 +111,6 @@ class Guess(Base):
         if not self.percentile:
             # Nothing worth celebrating
             return None
-        celebrate_emoji = random.choice(CELEBRATE_EMOJIS)
 
         # Get highest guess that is not current guess
         stmt = (
@@ -125,7 +124,14 @@ class Guess(Base):
         if other is None:
             # Current guess is highest, as it's the first! Let's celebrate the
             # first guess being green!
-            return f"First guess by <@{self.user_id}> was immediately in the green! {celebrate_emoji}"
+            if self.percentile < 990:
+                # Just top 1000 celebration
+                celebration_type = CelebrationType.TOP_1000_FIRST
+            else:
+                # Madness! To 10 first go?
+                celebration_type = CelebrationType.TOP_10_FIRST
+            return get_celebration_message(celebration_type, self.user_id, self.word)
+
         if other.percentile > self.percentile:
             # We're not the new highest, so lets bail
             return None
@@ -134,33 +140,35 @@ class Guess(Base):
             # It's the first green at all
             if self.percentile < 900:
                 # We're not in the top 100 yet, just a basic celebration
-                return f"<@{self.user_id}> just got the first green guess! {celebrate_emoji}"
-            if self.percentile < 990:
+                celebration_type = CelebrationType.TOP_1000
+            elif self.percentile < 990:
                 # Almost to top 10, but not so far!
-                return f"<@{self.user_id}> had a great first green guess! {celebrate_emoji}"
-            if self.percentile < 1000:
+                celebration_type = CelebrationType.TOP_100
+            else:
                 # In top 10!
-                return f"<@{self.user_id}> had a fantastic first green guess in the top 10! {celebrate_emoji}"
+                celebration_type = CelebrationType.TOP_10
         elif other.percentile < 900:
             # Other guess was not in top 100
             if self.percentile < 900:
                 # Neither are we!
                 return None
-            if self.percentile < 990:
+            elif self.percentile < 990:
                 # We breached top 100, but not top 10
-                return f"<@{self.user_id}> just got a little bit closer to the secret {celebrate_emoji}"
-            if self.percentile < 1000:
+                celebration_type = CelebrationType.TOP_100
+            else:
                 # Straight to top ten!
-                return f"<@{self.user_id}> had an amazing guess that's not far from the secret! {celebrate_emoji}"
+                celebration_type = CelebrationType.TOP_10
         elif other.percentile < 990:
             # Other guess was not in top 10
             if self.percentile < 990:
                 # Neither was ours!
                 return None
-            if self.percentile < 1000:
-                return f"Getting closer! A good guess by <@{self.user_id}>! {celebrate_emoji}"
+            # Must be in top 10!
+            celebration_type = CelebrationType.TOP_10
+        else:
+            return None
 
-        return None
+        return get_celebration_message(celebration_type, self.user_id, self.word)
 
     def __repr__(self) -> str:
         if self.percentile:

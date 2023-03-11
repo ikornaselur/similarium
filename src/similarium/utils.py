@@ -48,6 +48,10 @@ def get_similarity(vec1: list[float], vec2: list[float]) -> float:
     return cos_sim(vec1, vec2) * 100
 
 
+def get_celeration_emoji() -> str:
+    return random.choice(CELEBRATE_EMOJIS)
+
+
 PARTIAL_EMOJIS = 8
 P = [f":p{i}:" for i in range(0, PARTIAL_EMOJIS + 1)]
 
