@@ -21,7 +21,8 @@ celebration_messages_top_10 = [
 
 celebration_messages_top_100 = [
     "We're making progress! <@{user_id}> guessed `{word}` in the top 100! {celebrate_emoji}",
-    "The guesses are getting better! We just got a guess from <@{user_id}> of `{word}` in the top 100! {celebrate_emoji}",
+    "The guesses are getting better! "
+    "We just got a guess from <@{user_id}> of `{word}` in the top 100! {celebrate_emoji}",
     "We're getting close! A guess from <@{user_id}> of `{word}` is now in the top 100! {celebrate_emoji}",
     "The competition is heating up! <@{user_id}> just guessed `{word}` in the top 100! {celebrate_emoji}",
     "The guesses are getting stronger! <@{user_id}> just guessed `{word}` in the top 100! {celebrate_emoji}",
@@ -53,7 +54,7 @@ celebration_messages_top_10_first_guess = [
     "I think we have a genius among us! {celebrate_emoji}",
     "Incredible! The first green guess of `{word}` by <@{user_id}> was only a hair's breadth away from the secret! "
     "I'm in awe! {celebrate_emoji}",
-    "Mind-blowing! The first green guess by <@{user_id}> was so close to the secret, "
+    "Mind-blowing! The first green guess of `{word}` by <@{user_id}> was so close to the secret, "
     "they must have a direct line to the game master! {celebrate_emoji}",
 ]
 celebration_messages_top_1000_first_guess = [

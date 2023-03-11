@@ -6,12 +6,12 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import relationship, selectinload
-from similarium.celebration import CelebrationType, get_celebration_message
 
+from similarium.celebration import CelebrationType, get_celebration_message
 from similarium.config import config
 from similarium.db import Base
 from similarium.logging import logger
-from similarium.utils import CELEBRATE_EMOJIS, get_celeration_emoji, timestamp_ms
+from similarium.utils import timestamp_ms
 
 if TYPE_CHECKING:
     from similarium.models import Game
