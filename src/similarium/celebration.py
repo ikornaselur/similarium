@@ -12,7 +12,6 @@ celebration_messages_top_10 = [
     "Incredible guess by <@{user_id}>! `{word}` has been guessed in the top 10! {celebrate_emoji}",
     "What a guess! <@{user_id}> just guessed `{word}` in the top 10! {celebrate_emoji}",
     "That's what we call guessing! `{word}` was just guessed by <@{user_id}> in the top 10! {celebrate_emoji}",
-    "The competition is fierce! <@{user_id}> has just made it into the top 10 with `{word}`! {celebrate_emoji}",
     "We have a new leader! <@{user_id}> just guessed `{word}` in the top 10! {celebrate_emoji}",
     "What a game! <@{user_id}> just guessed `{word}` in the top 10! {celebrate_emoji}",
     "That's how it's done! `{word}` has just been guessed in the top 10 by <@{user_id}>! {celebrate_emoji}",
@@ -20,31 +19,33 @@ celebration_messages_top_10 = [
 ]
 
 celebration_messages_top_100 = [
-    "We're making progress! <@{user_id}> guessed `{word}` in the top 100! {celebrate_emoji}",
-    "The guesses are getting better! "
-    "We just got a guess from <@{user_id}> of `{word}` in the top 100! {celebrate_emoji}",
-    "We're getting close! A guess from <@{user_id}> of `{word}` is now in the top 100! {celebrate_emoji}",
-    "The competition is heating up! <@{user_id}> just guessed `{word}` in the top 100! {celebrate_emoji}",
+    "Our guessers are on fire! <@{user_id}> just guessed `{word}` in the top 100! {celebrate_emoji}",
+    "The guessing is heating up! <@{user_id}> just guessed `{word}` in the top 100! {celebrate_emoji}",
+    "The guesses are getting better! We just got a guess from <@{user_id}> "
+    "of `{word}` in the top 100! {celebrate_emoji}",
     "The guesses are getting stronger! <@{user_id}> just guessed `{word}` in the top 100! {celebrate_emoji}",
-    "Our guessers are on fire! <@{user_id}> just guessed of `{word}` in the top 100! {celebrate_emoji}",
-    "We're on a roll! A guess of `{word}` from <@{user_id}> has just entered the top 100! {celebrate_emoji}",
+    "The guessing is getting better! A guess of `{word}` from <@{user_id}> is in the top 100! {celebrate_emoji}",
+    "Things are heating up! A guess from <@{user_id}> of `{word}` is in the top 100! {celebrate_emoji}",
     "We have a contender! <@{user_id}> guessed `{word}` in the top 100! {celebrate_emoji}",
-    "The guessing is getting better! A guess of `{word}` from <@{user_id}> is now in the top 100! {celebrate_emoji}",
-    "Things are heating up! A guess from <@{user_id}> of `{word}` is now in the top 100! {celebrate_emoji}",
+    "We're getting close! A guess from <@{user_id}> of `{word}` is in the top 100! {celebrate_emoji}",
+    "We're making progress! <@{user_id}> guessed `{word}` in the top 100! {celebrate_emoji}",
+    "We're on a roll! A guess of `{word}` from <@{user_id}> has just entered the top 100! {celebrate_emoji}",
 ]
 
 celebration_messages_top_1000 = [
     "<@{user_id}>'s getting close! The word `{word}` has just been guessed in the top 1000! {celebrate_emoji}",
-    "The guessing is heating up! We just got a guess from <@{user_id}> of `{word}` in the top 1000! {celebrate_emoji}",
-    "We have a contender! A guess of `{word}` from <@{user_id}> has just entered the top 1000! {celebrate_emoji}",
-    "We're getting there! A guess of `{word}` from <@{user_id}> has been made in the top 1000! {celebrate_emoji}",
     "The guessing is starting off strong! <@{user_id}> just guessed `{word}` in the top 1000! {celebrate_emoji}",
-    "We're making progress! A guess of `{word}` from <@{user_id}> is now in the top 1000! {celebrate_emoji}",
-    "Things are heating up! A guess of `{word}` from <@{user_id}> is now in the top 1000! {celebrate_emoji}",
-    "Our guessers are on fire! A guess of `{word}` from <@{user_id}> has entered the top 1000! {celebrate_emoji}",
-    "The guesses are getting better! A guess of `{word}` from <@{user_id}> is now in the top 1000! {celebrate_emoji}",
-    "We're on a roll! A guess of `{word}` from <@{user_id}> is now in the top 1000! {celebrate_emoji}",
+    "We're getting there! A guess of `{word}` from <@{user_id}> has been made in the top 1000! {celebrate_emoji}",
+    "Great job <@{user_id}>! A guess of `{word}` has made it into the top 1000! {celebrate_emoji}",
+    "Well done <@{user_id}>! `{word}` has been guessed and is in the top 1000! {celebrate_emoji}",
+    "Keep it up <@{user_id}>! A guess of `{word}` has just entered the top 1000! {celebrate_emoji}",
+    "Great guess <@{user_id}>! `{word}` has just made it into the top 1000! {celebrate_emoji}",
+    "Excellent work <@{user_id}>! `{word}` has been guessed and is in the top 1000! {celebrate_emoji}",
+    "Well guessed <@{user_id}>! The word `{word}` has just been guessed and is in the top 1000! {celebrate_emoji}",
+    "Congratulations <@{user_id}>! `{word}` is in the top 1000! {celebrate_emoji}",
+    "That's a great guess <@{user_id}>! `{word}` has just made it to the top 1000! {celebrate_emoji}",
 ]
+
 celebration_messages_top_10_first_guess = [
     "Unbelievable! The first green guess of `{word}` by <@{user_id}> was so close to the secret! "
     "It's like they have a sixth sense! {celebrate_emoji}",
@@ -58,8 +59,8 @@ celebration_messages_top_10_first_guess = [
     "they must have a direct line to the game master! {celebrate_emoji}",
 ]
 celebration_messages_top_1000_first_guess = [
-    "Holy smokes! The very first guess of `{word}` and it's green! <@{user_id}>, "
-    "you're a natural! <celebrate_emoji>",
+    "Holy smokes! The very first guess of `{word}` and it's green! "
+    "<@{user_id}>, you're a natural! <celebrate_emoji>",
     "Stop the presses! The first guess from <@{user_id}> with `{word}` just landed in the top 1000! "
     "This is going to be epic! <celebrate_emoji>",
     "Unbelievable! The first guess from <@{user_id}> of `{word}` is a green one! "
