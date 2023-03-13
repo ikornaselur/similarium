@@ -49,12 +49,13 @@ sentry_sdk.init(
 @app.action("submit-guess")
 async def handle_submit_guess(ack, say, body, client):
     with sentry_sdk.start_transaction(op="task", name="Submit guess"):
-        await ack()
+        ack_task = asyncio.create_task(ack())
         if (
             not len(body.get("actions", []))
             or body["actions"][0].get("action_id") != "submit-guess"
         ):
             logger.error("Unable to get geuss from submission")
+            await ack_task
             return
         value = body["actions"][0]["value"]
 
@@ -74,11 +75,16 @@ async def handle_submit_guess(ack, say, body, client):
 
         async with db.session() as session:
             puzzle_number = get_puzzle_number()
-            game = await Game.get(
+            game_task = Game.get(
                 session=session,
                 channel_id=channel,
                 thread_ts=message_ts,
             )
+            user_id = body["user"]["id"]
+            user_task = User.by_id(user_id, session=session)
+
+            game, user = await asyncio.gather(*[game_task, user_task])
+
             if game is None:
                 raise NotFound(
                     f"Game not found for {channel=} {message_ts=} {puzzle_number=}"
@@ -86,9 +92,7 @@ async def handle_submit_guess(ack, say, body, client):
 
             if value is not None and (match := REGEX.match(value.strip())):
                 word = americanize(match.group("guess").lower())
-                user_id = body["user"]["id"]
 
-                user = await User.by_id(user_id, session=session)
                 if user is None:
                     user_info = await client.users_info(user=user_id)
                     user_data = user_info.data["user"]
@@ -138,19 +142,21 @@ async def handle_submit_guess(ack, say, body, client):
                         ":warning: You already got the winning word, you can't make"
                         " any further guesses :warning:"
                     )
+                    await ack_task
                     return
                 except InvalidWord:
                     await _ephemeral(
                         f':warning: *"{word}" is not a valid word!* :warning:'
                     )
+                    await ack_task
                     return
-
         await update_game(game)
+        await ack_task
 
 
 @app.command("/similarium")
 async def slash(ack, respond, say, command, client):
-    await ack()
+    ack_task = asyncio.create_task(ack())
 
     text = command["text"].strip()
     try:
@@ -177,6 +183,7 @@ async def slash(ack, respond, say, command, client):
                         ' Please use the "stop" command before running "start" again.'
                     )
                 )
+                await ack_task
                 return
 
             # Get user timezone to normalize the game posting to UTC+0
@@ -213,6 +220,7 @@ async def slash(ack, respond, say, command, client):
                 if error not in ("channel_not_found", "not_in_channel"):
                     sentry_sdk.capture_exception(e)
 
+                await ack_task
                 return
 
             logger.debug(f"User {when=} {timezone=} converted to {time=}")
@@ -242,6 +250,7 @@ async def slash(ack, respond, say, command, client):
                         ' mean to run "start"?'
                     )
                 )
+                await ack_task
                 return
             logger.debug(f"Setting {channel} as inactive")
             async with db.session() as session:
@@ -265,6 +274,7 @@ async def slash(ack, respond, say, command, client):
                 await end_game(channel_id)
             except Exception as e:
                 await respond(text=str(e))
+    await ack_task
 
 
 async def startup_task(app):
