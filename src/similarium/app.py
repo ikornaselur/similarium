@@ -75,11 +75,16 @@ async def handle_submit_guess(ack, say, body, client):
 
         async with db.session() as session:
             puzzle_number = get_puzzle_number()
-            game = await Game.get(
+            game_task = Game.get(
                 session=session,
                 channel_id=channel,
                 thread_ts=message_ts,
             )
+            user_id = body["user"]["id"]
+            user_task = User.by_id(user_id, session=session)
+
+            game, user = await asyncio.gather(*[game_task, user_task])
+
             if game is None:
                 raise NotFound(
                     f"Game not found for {channel=} {message_ts=} {puzzle_number=}"
@@ -87,9 +92,7 @@ async def handle_submit_guess(ack, say, body, client):
 
             if value is not None and (match := REGEX.match(value.strip())):
                 word = americanize(match.group("guess").lower())
-                user_id = body["user"]["id"]
 
-                user = await User.by_id(user_id, session=session)
                 if user is None:
                     user_info = await client.users_info(user=user_id)
                     user_data = user_info.data["user"]
