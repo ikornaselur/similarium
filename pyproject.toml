@@ -66,6 +66,7 @@ include = ["src", "tests"]
 [tool.ruff]
 ignore = ["A003"]
 line-length = 120
+unfixable = ["F841"]
 select = [
     "A",
     "E",

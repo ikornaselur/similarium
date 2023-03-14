@@ -46,7 +46,7 @@ class AsyncSQLAlchemyInstallationStore(AsyncInstallationStore):
 
     async def async_save(self, installation: Installation):
         async with db.session() as s:
-            async with s.transaction():
+            async with s.begin_nested():
                 i = installation.to_dict()
                 i["client_id"] = self.client_id
                 await s.execute(self.installations.insert(), i)
@@ -130,7 +130,7 @@ class AsyncSQLAlchemyOAuthStateStore(AsyncOAuthStateStore):
     async def async_consume(self, state: str) -> bool:
         try:
             async with db.session() as s:
-                async with s.transaction():
+                async with s.begin_nested():
                     c = self.oauth_states.c
                     query = self.oauth_states.select().where(
                         sa.and_(c.state == state, c.expire_at > datetime.utcnow())
