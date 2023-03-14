@@ -1,7 +1,7 @@
 import time
 from datetime import datetime
 from logging import Logger
-from typing import Optional
+from typing import Any, Optional
 from uuid import uuid4
 
 import sqlalchemy as sa
@@ -60,23 +60,25 @@ class AsyncSQLAlchemyInstallationStore(AsyncInstallationStore):
         enterprise_id: Optional[str],
         team_id: Optional[str],
         is_enterprise_install: Optional[bool],
+        **kwargs: Any,
     ) -> Optional[Installation]:
         c = self.installations.c
+        where_filter = [
+            c.enterprise_id == enterprise_id,
+            c.team_id == team_id,
+            c.is_enterprise_install == is_enterprise_install,
+        ]
+        if "user_id" in kwargs:
+            where_filter.append(c.user_id == kwargs["user_id"])
         stmt = (
             sa.select(c)
-            .where(
-                sa.and_(
-                    c.enterprise_id == enterprise_id,
-                    c.team_id == team_id,
-                    c.is_enterprise_install == is_enterprise_install,
-                )
-            )
+            .where(sa.and_(*where_filter))
             .order_by(sa.desc(c.installed_at))
             .limit(1)
         )
         async with db.session() as s:
             result = await s.execute(stmt)
-            if (inst := result.one_or_none()):
+            if inst := result.one_or_none():
                 return Installation(
                     app_id=inst["app_id"],
                     enterprise_id=inst["enterprise_id"],
