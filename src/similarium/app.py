@@ -67,7 +67,7 @@ async def handle_submit_guess(ack, say, body, client):
 
         async def _ephemeral(text: str) -> None:
             await client.chat_postEphemeral(
-                token=get_bot_token_for_team(team_id),
+                token=await get_bot_token_for_team(team_id),
                 text=text,
                 channel=channel,
                 user=user_id,

@@ -47,7 +47,7 @@ async def start_game(channel_id: str):
 
     try:
         resp = await app.client.chat_postMessage(
-            token=get_bot_token_for_team(channel.team_id),
+            token=await get_bot_token_for_team(channel.team_id),
             text=header_text,
             channel=channel_id,
             blocks=[
@@ -104,7 +104,7 @@ async def start_game(channel_id: str):
 
 async def update_game(game: Game) -> None:
     await app.client.chat_update(
-        token=get_bot_token_for_team(game.channel.team_id),
+        token=await get_bot_token_for_team(game.channel.team_id),
         channel=game.channel_id,
         ts=game.thread_ts,
         text="Update to todays game",
@@ -123,7 +123,7 @@ async def end_game(channel_id: str) -> None:
             await session.commit()
 
             await app.client.chat_update(
-                token=get_bot_token_for_team(game.channel.team_id),
+                token=await get_bot_token_for_team(game.channel.team_id),
                 channel=game.channel_id,
                 ts=game.thread_ts,
                 text="Update to todays game",

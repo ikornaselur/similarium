@@ -3,13 +3,16 @@ from typing import Literal, Optional, TypedDict
 
 from slack_bolt.app.async_app import AsyncApp
 from slack_bolt.oauth.async_oauth_settings import AsyncOAuthSettings
-from slack_sdk.oauth.installation_store.file import FileInstallationStore
-from slack_sdk.oauth.state_store.file import FileOAuthStateStore
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from similarium import db
 from similarium.config import config
+from similarium.logging import logger
 from similarium.models import Game, Guess
+from similarium.models.stores import (
+    AsyncSQLAlchemyInstallationStore,
+    AsyncSQLAlchemyOAuthStateStore,
+)
 from similarium.utils import get_custom_progress_bar, get_header_body, get_header_text
 
 SPACE = " "
@@ -20,15 +23,23 @@ LATEST_GUESSES_TO_SHOW = 3
 if config.slack.dev_mode:
     app = AsyncApp(token=config.slack.bot_token)
 else:
-    installation_store = FileInstallationStore(base_dir="./data/installations")
+    installation_store = AsyncSQLAlchemyInstallationStore(
+        client_id=config.slack.client_id,
+        metadata=db.Base.metadata,
+        logger=logger,
+    )
+    oauth_state_store = AsyncSQLAlchemyOAuthStateStore(
+        expiration_seconds=600,
+        metadata=db.Base.metadata,
+        logger=logger,
+    )
+
     oauth_settings = AsyncOAuthSettings(
         client_id=config.slack.client_id,
         client_secret=config.slack.client_secret,
         scopes=config.slack.scopes,
         installation_store=installation_store,
-        state_store=FileOAuthStateStore(
-            expiration_seconds=600, base_dir="./data/states"
-        ),
+        state_store=oauth_state_store,
     )
     app = AsyncApp(
         signing_secret=config.slack.signing_secret,
@@ -37,13 +48,12 @@ else:
     )
 
 
-def get_bot_token_for_team(team_id: str) -> str:
+async def get_bot_token_for_team(team_id: str) -> str:
     if config.slack.dev_mode:
         return config.slack.bot_token
 
-    installation = installation_store.find_installation(
-        enterprise_id=None,
-        team_id=team_id,
+    installation = await installation_store.async_find_installation(
+        enterprise_id=None, team_id=team_id
     )
     if installation is None:
         # XXX

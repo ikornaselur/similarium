@@ -58,6 +58,9 @@ shell:
 upgrade:
 	@poetry run alembic upgrade head
 
+downgrade:
+	@poetry run alembic downgrade -1
+
 migrate:
 	@[ "${MSG}" ] || ( echo ">> MSG env var needs to be set to the migration message"; exit 1 )
 	@poetry run alembic revision --autogenerate -m "${MSG}"
@@ -91,5 +94,17 @@ docker_build_and_push:
 		--push \
 		-t $(DOCKER_REPO):$(VERSION) \
 		-t $(DOCKER_REPO):latest \
+		.
+	@rm requirements.txt
+
+docker_build_and_push_dev:
+	@poetry export -E sqlite -E postgres -f requirements.txt > requirements.txt
+	@docker buildx build \
+		--platform "linux/amd64" \
+		--cache-from type=registry,ref=$(DOCKER_REPO):cache \
+		--cache-to   type=registry,ref=$(DOCKER_REPO):cache,mode=max \
+		-f docker/Dockerfile \
+		--push \
+		-t $(DOCKER_REPO):dev \
 		.
 	@rm requirements.txt
