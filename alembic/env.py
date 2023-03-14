@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from logging.config import fileConfig
 
 from alembic import context
@@ -8,6 +9,25 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from similarium.config import config as similarium_config
 from similarium.db import Base
 from similarium.models import *  # noqa: F401
+from similarium.models.stores import (
+    AsyncSQLAlchemyInstallationStore,
+    AsyncSQLAlchemyOAuthStateStore,
+)
+
+logger = logging.getLogger("alembic")
+
+# Create stores to have the metadata populated
+installation_store = AsyncSQLAlchemyInstallationStore(
+    client_id="client_id",
+    metadata=Base.metadata,
+    logger=logger,
+)
+oauth_state_store = AsyncSQLAlchemyOAuthStateStore(
+    expiration_seconds=600,
+    metadata=Base.metadata,
+    logger=logger,
+)
+
 
 config = context.config
 config.set_main_option("sqlalchemy.url", similarium_config.database.uri)

@@ -67,7 +67,7 @@ async def handle_submit_guess(ack, say, body, client):
 
         async def _ephemeral(text: str) -> None:
             await client.chat_postEphemeral(
-                token=get_bot_token_for_team(team_id),
+                token=await get_bot_token_for_team(team_id),
                 text=text,
                 channel=channel,
                 user=user_id,
@@ -122,10 +122,6 @@ async def handle_submit_guess(ack, say, body, client):
                         word=word, user_id=user_id, session=session
                     )
                     await session.commit()
-                    if celebration := await guess.get_celebration(session=session):
-                        # It's worth celebrating this guess!
-                        # This is done for the first words that breach top 1000, top 100 and top 10
-                        await say(celebration)
                     if guess.is_secret:
                         # Let the user know that it was the secret
                         await _ephemeral(
@@ -137,6 +133,10 @@ async def handle_submit_guess(ack, say, body, client):
                             f"{celebrate_emoji} <@{user_id}> has just found the "
                             f"secret of the day! {celebrate_emoji}"
                         )
+                    elif celebration := await guess.get_celebration(session=session):
+                        # It's worth celebrating this guess!
+                        # This is done for the first words that breach top 1000, top 100 and top 10
+                        await say(celebration)
                 except UserAlreadyWon:
                     await _ephemeral(
                         ":warning: You already got the winning word, you can't make"
