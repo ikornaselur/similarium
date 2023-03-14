@@ -19,28 +19,27 @@ SPACE = " "
 TOP_GUESSES_TO_SHOW = 15
 LATEST_GUESSES_TO_SHOW = 3
 
+installation_store = AsyncSQLAlchemyInstallationStore(
+    client_id=config.slack.client_id,
+    metadata=db.Base.metadata,
+    logger=logger,
+)
+oauth_state_store = AsyncSQLAlchemyOAuthStateStore(
+    expiration_seconds=600,
+    metadata=db.Base.metadata,
+    logger=logger,
+)
+oauth_settings = AsyncOAuthSettings(
+    client_id=config.slack.client_id,
+    client_secret=config.slack.client_secret,
+    scopes=config.slack.scopes,
+    installation_store=installation_store,
+    state_store=oauth_state_store,
+)
 
 if config.slack.dev_mode:
     app = AsyncApp(token=config.slack.bot_token)
 else:
-    installation_store = AsyncSQLAlchemyInstallationStore(
-        client_id=config.slack.client_id,
-        metadata=db.Base.metadata,
-        logger=logger,
-    )
-    oauth_state_store = AsyncSQLAlchemyOAuthStateStore(
-        expiration_seconds=600,
-        metadata=db.Base.metadata,
-        logger=logger,
-    )
-
-    oauth_settings = AsyncOAuthSettings(
-        client_id=config.slack.client_id,
-        client_secret=config.slack.client_secret,
-        scopes=config.slack.scopes,
-        installation_store=installation_store,
-        state_store=oauth_state_store,
-    )
     app = AsyncApp(
         signing_secret=config.slack.signing_secret,
         installation_store=installation_store,
