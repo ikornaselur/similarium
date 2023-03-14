@@ -1,6 +1,7 @@
 import dataclasses as dc
+import os
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar, Protocol, TypeVar, cast, overload
 
 import toml
 
@@ -71,9 +72,29 @@ class Config:
     rules: Rules
 
 
-def from_dict(klass, d) -> Any:
+class DataclassInstance(Protocol):
+    __dataclass_fields__: ClassVar[dict[str, dc.Field[Any]]]
+
+
+DataclassT = TypeVar("DataclassT", bound=DataclassInstance)
+Value = str | bool | list
+
+
+@overload
+def from_dict(klass: type[DataclassT], d: dict) -> DataclassT:
+    ...
+
+
+@overload
+def from_dict(klass: Any, d: Value) -> Value:
+    ...
+
+
+def from_dict(klass: type[DataclassT], d: dict | Value) -> DataclassT | Value:
     if not dc.is_dataclass(klass):
-        return d
+        return cast(Value, d)
+    if not isinstance(d, dict):
+        raise ConfigError("Expected a dictionary")
 
     fieldtypes = {f.name: f.type for f in dc.fields(klass)}
     if missing := set(fieldtypes.keys()) - set(d.keys()):
@@ -81,6 +102,12 @@ def from_dict(klass, d) -> Any:
             f"Missing key(s) in {klass.__name__} section: {', '.join(missing)}"
         )
     return klass(**{f: from_dict(fieldtypes[f], d[f]) for f in d})
+
+
+# Where to load the config from, supported options:
+# * `config.toml`: The default, see config.example.toml
+# * `env`: Each
+CONFIG_SOURCE = os.environ.get("SIMILARIUM_CONFIG_SOURCE", "config.toml")
 
 
 _config_path = Path("./config.toml")
