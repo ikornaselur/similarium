@@ -53,7 +53,7 @@ async def get_bot_token_for_team(team_id: str) -> str:
         return config.slack.bot_token
 
     installation = await installation_store.async_find_installation(
-        enterprise_id=None, team_id=team_id
+        enterprise_id=None, team_id=team_id, is_enterprise_install=False
     )
     if installation is None:
         # XXX

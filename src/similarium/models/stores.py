@@ -5,7 +5,7 @@ from typing import Optional
 from uuid import uuid4
 
 import sqlalchemy as sa
-from slack_sdk.oauth.installation_store import Bot, Installation
+from slack_sdk.oauth.installation_store import Installation
 from slack_sdk.oauth.installation_store.async_installation_store import (
     AsyncInstallationStore,
 )
@@ -54,16 +54,16 @@ class AsyncSQLAlchemyInstallationStore(AsyncInstallationStore):
                 b["client_id"] = self.client_id
                 await s.execute(self.bots.insert(), b)
 
-    async def async_find_bot(
+    async def async_find_installation(
         self,
         *,
         enterprise_id: Optional[str],
         team_id: Optional[str],
         is_enterprise_install: Optional[bool],
-    ) -> Optional[Bot]:
-        c = self.bots.c
-        query = (
-            self.bots.select()
+    ) -> Optional[Installation]:
+        c = self.installations.c
+        stmt = (
+            sa.select(c)
             .where(
                 sa.and_(
                     c.enterprise_id == enterprise_id,
@@ -75,17 +75,18 @@ class AsyncSQLAlchemyInstallationStore(AsyncInstallationStore):
             .limit(1)
         )
         async with db.session() as s:
-            result = await s.fetch_one(query)
-            if result:
-                return Bot(
-                    app_id=result["app_id"],
-                    enterprise_id=result["enterprise_id"],
-                    team_id=result["team_id"],
-                    bot_token=result["bot_token"],
-                    bot_id=result["bot_id"],
-                    bot_user_id=result["bot_user_id"],
-                    bot_scopes=result["bot_scopes"],
-                    installed_at=result["installed_at"],
+            result = await s.execute(stmt)
+            if (inst := result.one_or_none()):
+                return Installation(
+                    app_id=inst["app_id"],
+                    enterprise_id=inst["enterprise_id"],
+                    team_id=inst["team_id"],
+                    user_id=inst["user_id"],
+                    bot_token=inst["bot_token"],
+                    bot_id=inst["bot_id"],
+                    bot_user_id=inst["bot_user_id"],
+                    bot_scopes=inst["bot_scopes"],
+                    installed_at=inst["installed_at"],
                 )
             else:
                 return None
