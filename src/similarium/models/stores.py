@@ -1,5 +1,5 @@
 import time
-from datetime import datetime
+import datetime as dt
 from logging import Logger
 from typing import Any, Optional
 from uuid import uuid4
@@ -53,6 +53,7 @@ class AsyncSQLAlchemyInstallationStore(AsyncInstallationStore):
                 b = installation.to_bot().to_dict()
                 b["client_id"] = self.client_id
                 await s.execute(self.bots.insert(), b)
+                await s.commit()
 
     async def async_find_installation(
         self,
@@ -120,26 +121,31 @@ class AsyncSQLAlchemyOAuthStateStore(AsyncOAuthStateStore):
 
     async def async_issue(self) -> str:
         state: str = str(uuid4())
-        now = datetime.utcfromtimestamp(time.time() + self.expiration_seconds)
+        now = dt.datetime.utcfromtimestamp(time.time() + self.expiration_seconds)
         async with db.session() as s:
-            await s.execute(
-                self.oauth_states.insert(), {"state": state, "expire_at": now}
-            )
-            return state
+            stmt = sa.insert(self.oauth_states).values(state=state, expire_at=now)
+            await s.execute(stmt)
+            await s.commit()
+        return state
 
     async def async_consume(self, state: str) -> bool:
         try:
             async with db.session() as s:
                 async with s.begin_nested():
                     c = self.oauth_states.c
-                    query = self.oauth_states.select().where(
-                        sa.and_(c.state == state, c.expire_at > datetime.utcnow())
+                    stmt = self.oauth_states.select().where(
+                        sa.and_(
+                            c.state == state,
+                            c.expire_at > dt.datetime.utcnow(),
+                        )
                     )
-                    row = await s.fetch_one(query)
+                    result = await s.execute(stmt)
+                    row = result.one()
                     self.logger.debug(f"consume's query result: {row}")
                     await s.execute(self.oauth_states.delete().where(c.id == row["id"]))
+                    await s.commit()
                     return True
-        except Exception as e:
+        except sa.exc.NoResultFound as e:  # pyright: ignore
             message = f"Failed to find any persistent data for state: {state} - {e}"
             self.logger.warning(message)
             return False

@@ -1,6 +1,6 @@
 from slack_sdk.oauth.installation_store.models import Installation
 
-from similarium.slack import installation_store
+from similarium.slack import installation_store, oauth_state_store
 
 
 async def test_installation_store_save(db):
@@ -20,3 +20,11 @@ async def test_installation_store_save(db):
     )
 
     assert saved_installation is not None
+
+
+async def test_oauth_state_store(db):
+    assert not await oauth_state_store.async_consume(state="foo")
+
+    state = await oauth_state_store.async_issue()
+
+    assert await oauth_state_store.async_consume(state=state)
