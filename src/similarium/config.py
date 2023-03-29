@@ -60,6 +60,12 @@ class Sentry:
 class Rules:
     similarity_count: int
 
+@dc.dataclass
+class OpenAI:
+    api_key: str
+    api_url: str
+    temperature: float
+
 
 @dc.dataclass
 class Config:
@@ -69,6 +75,7 @@ class Config:
     slack: Slack
     sentry: Sentry
     rules: Rules
+    openai: OpenAI
 
 
 def from_dict(klass, d) -> Any:
