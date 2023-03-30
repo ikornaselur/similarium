@@ -129,8 +129,11 @@ class Game(Base):
 
     async def add_guess(
         self, *, word: str, user_id: str, session: AsyncSession
-    ) -> Guess:
-        """Add a guess to the game"""
+    ) -> tuple[Guess, bool]:
+        """Add a guess to the game
+
+        Returns a tuple of the guess and if it's a new guess or an existing one
+        """
         from .guess import Guess
         from .nearby import Nearby
         from .word2vec import Word2Vec
@@ -187,7 +190,7 @@ class Game(Base):
             logger.debug(f"Guess has already been made {guess=}")
             guess.updated = timestamp_ms()  # type: ignore
             guess.latest_guess_user_id = user_id  # type: ignore
-            return guess
+            return (guess, False)
 
         # Create a new guess
         guess = await Guess.new(
@@ -201,7 +204,7 @@ class Game(Base):
         session.add(guess)
         await session.refresh(self)
 
-        return guess
+        return (guess, True)
 
     async def top_guesses(self, n: int, /, *, session: AsyncSession) -> list[Guess]:
         from .guess import Guess

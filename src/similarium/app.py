@@ -179,7 +179,7 @@ async def handle_submit_guess(ack, say, body, client):
                         await session.commit()
 
                 try:
-                    guess = await game.add_guess(
+                    (guess, new_guess) = await game.add_guess(
                         word=word, user_id=user_id, session=session
                     )
                     await session.commit()
@@ -194,7 +194,9 @@ async def handle_submit_guess(ack, say, body, client):
                             f"{celebrate_emoji} <@{user_id}> has just found the "
                             f"secret of the day! {celebrate_emoji}"
                         )
-                    elif celebration := await guess.get_celebration(session=session):
+                    elif new_guess and (
+                        celebration := await guess.get_celebration(session=session)
+                    ):
                         # It's worth celebrating this guess!
                         # This is done for the first words that breach top 1000, top 100 and top 10
                         await say(celebration)
