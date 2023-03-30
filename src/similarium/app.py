@@ -106,6 +106,8 @@ async def handle_some_action(ack, body, client):
             hint = await game.get_hint(user, session=session)
 
             await _ephemeral(hint)
+            # Update the game so that hint seeker list is updated immediately
+            await update_game(game)
 
 
 @app.action("submit-guess")
