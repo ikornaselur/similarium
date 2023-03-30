@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import relationship, selectinload
 from sqlalchemy.sql.schema import Index
+from similarium.ai import chat_completion_request, get_prompt
 
 from similarium.config import config
 from similarium.db import Base
@@ -257,6 +258,29 @@ class Game(Base):
                 f"{medal}<@{winner.user_id}> got the secret on guess {guess_num}!"
             )
         return winners
+
+    async def get_hint(
+        self, close_words_context_count: int = 20, *, session: AsyncSession
+    ) -> str:
+        """Get a hint from ChatGPT for this game secret"""
+
+        # First get the close words to use for context
+        from .nearby import Nearby
+
+        stmt = select(Nearby).where(
+            Nearby.word == self.secret,
+            Nearby.percentile >= 1000 - close_words_context_count,
+            Nearby.percentile < 1000,
+        )
+        result = await session.execute(stmt)
+
+        close_words = [word.neighbor for word in result.scalars()]
+
+        # Then craft the prompt
+        prompt = get_prompt(self.secret, close_words)
+
+        # And get the hint
+        return await chat_completion_request(prompt)
 
     def __repr__(self) -> str:
         return (

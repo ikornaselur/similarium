@@ -121,6 +121,23 @@ class GuessContextBlock(TypedDict):
     elements: tuple[ProfileBlock, MarkdownTextBlock, MarkdownTextBlock]
 
 
+class HintContextBlock(TypedDict):
+    type: Literal["context"]
+    elements: tuple[MarkdownTextBlock]
+
+
+class ButtonBlock(TypedDict):
+    type: Literal["button"]
+    text: TextBlock
+    value: str
+    action_id: str
+
+
+class ButtonsActionBlock(TypedDict):
+    type: Literal["actions"]
+    elements: list[ButtonBlock]
+
+
 class SlackGame:
     """A slack game instance"""
 
@@ -166,6 +183,41 @@ class SlackGame:
                 "text": "Guess",
                 "emoji": True,
             },
+        }
+
+    @property
+    def hint_text(self) -> HintContextBlock:
+        return {
+            "type": "context",
+            "elements": (
+                {
+                    "type": "mrkdwn",
+                    "text": (
+                        f"It's been over {config.hints.threshold} guesses without finding"
+                        " the secret! Want a hint? ChatGPT can give you one!\nIf you"
+                        " request a hint, only you will see it, but everyone will know"
+                        " that you got it!"
+                    ),
+                },
+            ),
+        }
+
+    @property
+    def hint_button(self) -> ButtonsActionBlock:
+        return {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Get hint",
+                        "emoji": True,
+                    },
+                    "value": "hint",
+                    "action_id": "hint",
+                }
+            ],
         }
 
     def markdown_section(self, text) -> MarkdownSectionBlock:
@@ -346,5 +398,10 @@ async def get_thread_blocks(game_id: int) -> list:
                 slack_game.input if game.active else None,
             ]
         )
+
+        if config.hints.enabled and len(game.guesses) >= config.hints.threshold:
+            # Time to offer hints!
+            blocks.append(slack_game.hint_text)
+            blocks.append(slack_game.hint_button)
 
         return [b for b in blocks if b is not None]

@@ -170,5 +170,7 @@ def parse_command(text: str) -> Command:
             return Manual(action="start")
         case ["manual", "end"] if config.slack.dev_mode:
             return Manual(action="end")
+        case ["manual", "random"] if config.slack.dev_mode:
+            return Manual(action="random")
         case _:
             raise ParseException(":no_entry_sign: Unknown command :no_entry_sign:")

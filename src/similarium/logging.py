@@ -11,7 +11,6 @@ web_logger.setLevel(config.logging.web_log_level)
 
 
 def configure_logger() -> None:
-
     logger.handlers.clear()
     logger.addHandler(RichHandler(log_time_format="[%X]", markup=False))
 

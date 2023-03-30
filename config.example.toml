@@ -35,8 +35,11 @@ env = "dev"
 [rules]
 similarity_count = 1000
 
-[openai]
+[hints]
 enabled = true
+threshold = 100
+
+[hints.openai]
 api_key = "<OPENAI_API_KEY>"
 api_url = "https://api.openai.com/v1/chat/completions"
 temperature = 1.2
