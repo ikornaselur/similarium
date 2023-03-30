@@ -9,6 +9,7 @@ from similarium import db
 from similarium.config import config
 from similarium.logging import logger
 from similarium.models import Game, Guess
+from similarium.models.game_user_hint_association import GameUserHintAssociation
 from similarium.models.stores import (
     AsyncSQLAlchemyInstallationStore,
     AsyncSQLAlchemyOAuthStateStore,
@@ -119,6 +120,12 @@ class GuessContextBlock(TypedDict):
     type: Literal["context"]
     block_id: str
     elements: tuple[ProfileBlock, MarkdownTextBlock, MarkdownTextBlock]
+
+
+class HintSeekerContextBlock(TypedDict):
+    type: Literal["context"]
+    block_id: str
+    elements: tuple[ProfileBlock, MarkdownTextBlock]
 
 
 class HintContextBlock(TypedDict):
@@ -306,6 +313,25 @@ class SlackGame:
             ),
         }
 
+    def hint_seeker_context(
+        self, hint_seeker: GameUserHintAssociation
+    ) -> HintSeekerContextBlock:
+        return {
+            "type": "context",
+            "block_id": f"hint-seeker-{hint_seeker.user.username}",
+            "elements": (
+                {
+                    "type": "image",
+                    "image_url": hint_seeker.user.profile_photo,
+                    "alt_text": hint_seeker.user.username,
+                },
+                {
+                    "type": "mrkdwn",
+                    "text": f"<@{hint_seeker.user.id}> saw the hint at guess {hint_seeker.guess_idx}",
+                },
+            ),
+        }
+
 
 def _closeness(guess: Guess) -> str:
     similarity_count = config.rules.similarity_count
@@ -401,7 +427,19 @@ async def get_thread_blocks(game_id: int) -> list:
 
         if config.hints.enabled and len(game.guesses) >= config.hints.threshold:
             # Time to offer hints!
-            blocks.append(slack_game.hint_text)
-            blocks.append(slack_game.hint_button)
+            blocks.extend(
+                [
+                    slack_game.markdown_section("*Hints*"),
+                    slack_game.hint_text,
+                    slack_game.hint_button,
+                ]
+            )
+            if game.hint_seekers:
+                blocks.extend(
+                    [
+                        slack_game.hint_seeker_context(hint_seeker)
+                        for hint_seeker in game.hint_seekers
+                    ]
+                )
 
         return [b for b in blocks if b is not None]

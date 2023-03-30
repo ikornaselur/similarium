@@ -91,16 +91,19 @@ async def handle_some_action(ack, body, client):
             )
 
         async with db.session() as session:
-            game = await Game.get(
+            game_task = Game.get(
                 session=session,
                 channel_id=channel,
                 thread_ts=message_ts,
             )
+            user_task = User.by_id(user_id, session=session)
+
+            game, user = await asyncio.gather(*[game_task, user_task])
 
             if game is None:
                 raise NotFound(f"Game not found for {channel=} {message_ts=}")
 
-            hint = await game.get_hint(session=session)
+            hint = await game.get_hint(user, session=session)
 
             await _ephemeral(hint)
 
