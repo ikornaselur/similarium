@@ -1,6 +1,7 @@
 # flake8: noqa: F401
 from .channel import Channel
 from .game import Game
+from .game_user_hint_association import GameUserHintAssociation
 from .game_user_winner_association import GameUserWinnerAssociation
 from .guess import Guess
 from .nearby import Nearby

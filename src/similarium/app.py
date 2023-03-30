@@ -46,16 +46,77 @@ sentry_sdk.init(
 )
 
 
+@app.action("hint")
+async def handle_some_action(ack, body, client):
+    await ack()
+    with sentry_sdk.start_transaction(op="task", name="Request hint"):
+        if (
+            not len(body.get("actions", []))
+            or body["actions"][0].get("action_id") != "hint"
+        ):
+            logger.error("Request was not a hint request")
+            return
+
+        message_ts = body["container"]["message_ts"]
+        channel = body["container"]["channel_id"]
+        team_id = body["user"]["team_id"]
+        user_id = body["user"]["id"]
+
+        async def _ephemeral(hint: str) -> None:
+            await client.chat_postEphemeral(
+                token=await get_bot_token_for_team(team_id),
+                text=f"Hint of the day from ChatGPT: {hint}",
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": (
+                                "Here's the hint of the day according to ChatGPT. Hope"
+                                " it's useful!"
+                            ),
+                        },
+                    },
+                    {
+                        "type": "header",
+                        "text": {
+                            "type": "plain_text",
+                            "text": hint,
+                            "emoji": True,
+                        },
+                    },
+                ],
+                channel=channel,
+                user=user_id,
+            )
+
+        async with db.session() as session:
+            game_task = Game.get(
+                session=session,
+                channel_id=channel,
+                thread_ts=message_ts,
+            )
+            user_task = User.by_id(user_id, session=session)
+
+            game, user = await asyncio.gather(*[game_task, user_task])
+
+            if game is None:
+                raise NotFound(f"Game not found for {channel=} {message_ts=}")
+
+            hint = await game.get_hint(user, session=session)
+
+            await _ephemeral(hint)
+
+
 @app.action("submit-guess")
 async def handle_submit_guess(ack, say, body, client):
+    await ack()
     with sentry_sdk.start_transaction(op="task", name="Submit guess"):
-        ack_task = asyncio.create_task(ack())
         if (
             not len(body.get("actions", []))
             or body["actions"][0].get("action_id") != "submit-guess"
         ):
-            logger.error("Unable to get geuss from submission")
-            await ack_task
+            logger.error("Unable to get guess from submission")
             return
         value = body["actions"][0]["value"]
 
@@ -64,6 +125,7 @@ async def handle_submit_guess(ack, say, body, client):
         message_ts = body["container"]["message_ts"]
         channel = body["container"]["channel_id"]
         team_id = body["user"]["team_id"]
+        user_id = body["user"]["id"]
 
         async def _ephemeral(text: str) -> None:
             await client.chat_postEphemeral(
@@ -80,7 +142,6 @@ async def handle_submit_guess(ack, say, body, client):
                 channel_id=channel,
                 thread_ts=message_ts,
             )
-            user_id = body["user"]["id"]
             user_task = User.by_id(user_id, session=session)
 
             game, user = await asyncio.gather(*[game_task, user_task])
@@ -118,7 +179,7 @@ async def handle_submit_guess(ack, say, body, client):
                         await session.commit()
 
                 try:
-                    guess = await game.add_guess(
+                    (guess, new_guess) = await game.add_guess(
                         word=word, user_id=user_id, session=session
                     )
                     await session.commit()
@@ -133,7 +194,9 @@ async def handle_submit_guess(ack, say, body, client):
                             f"{celebrate_emoji} <@{user_id}> has just found the "
                             f"secret of the day! {celebrate_emoji}"
                         )
-                    elif celebration := await guess.get_celebration(session=session):
+                    elif new_guess and (
+                        celebration := await guess.get_celebration(session=session)
+                    ):
                         # It's worth celebrating this guess!
                         # This is done for the first words that breach top 1000, top 100 and top 10
                         await say(celebration)
@@ -142,21 +205,18 @@ async def handle_submit_guess(ack, say, body, client):
                         ":warning: You already got the winning word, you can't make"
                         " any further guesses :warning:"
                     )
-                    await ack_task
                     return
                 except InvalidWord:
                     await _ephemeral(
                         f':warning: *"{word}" is not a valid word!* :warning:'
                     )
-                    await ack_task
                     return
         await update_game(game)
-        await ack_task
 
 
 @app.command("/similarium")
 async def slash(ack, respond, say, command, client):
-    ack_task = asyncio.create_task(ack())
+    await ack()
 
     text = command["text"].strip()
     try:
@@ -183,7 +243,6 @@ async def slash(ack, respond, say, command, client):
                         ' Please use the "stop" command before running "start" again.'
                     )
                 )
-                await ack_task
                 return
 
             # Get user timezone to normalize the game posting to UTC+0
@@ -220,7 +279,6 @@ async def slash(ack, respond, say, command, client):
                 if error not in ("channel_not_found", "not_in_channel"):
                     sentry_sdk.capture_exception(e)
 
-                await ack_task
                 return
 
             logger.debug(f"User {when=} {timezone=} converted to {time=}")
@@ -250,7 +308,6 @@ async def slash(ack, respond, say, command, client):
                         ' mean to run "start"?'
                     )
                 )
-                await ack_task
                 return
             logger.debug(f"Setting {channel} as inactive")
             async with db.session() as session:
@@ -268,13 +325,21 @@ async def slash(ack, respond, say, command, client):
                 await start_game(channel_id)
             except Exception as e:
                 await respond(text=str(e))
+        case Manual(action="random"):
+            logger.debug(
+                "Manually starting a game with random puzzle number on channel"
+            )
+            puzzle_number = random.randint(1, 4200)
+            try:
+                await start_game(channel_id, puzzle_number)
+            except Exception as e:
+                await respond(text=str(e))
         case Manual(action="end"):
             logger.debug("Manually ending game on channel")
             try:
                 await end_game(channel_id)
             except Exception as e:
                 await respond(text=str(e))
-    await ack_task
 
 
 async def startup_task(app):

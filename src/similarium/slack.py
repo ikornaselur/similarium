@@ -9,6 +9,7 @@ from similarium import db
 from similarium.config import config
 from similarium.logging import logger
 from similarium.models import Game, Guess
+from similarium.models.game_user_hint_association import GameUserHintAssociation
 from similarium.models.stores import (
     AsyncSQLAlchemyInstallationStore,
     AsyncSQLAlchemyOAuthStateStore,
@@ -121,6 +122,29 @@ class GuessContextBlock(TypedDict):
     elements: tuple[ProfileBlock, MarkdownTextBlock, MarkdownTextBlock]
 
 
+class HintSeekerContextBlock(TypedDict):
+    type: Literal["context"]
+    block_id: str
+    elements: tuple[ProfileBlock, MarkdownTextBlock]
+
+
+class HintContextBlock(TypedDict):
+    type: Literal["context"]
+    elements: tuple[MarkdownTextBlock]
+
+
+class ButtonBlock(TypedDict):
+    type: Literal["button"]
+    text: TextBlock
+    value: str
+    action_id: str
+
+
+class ButtonsActionBlock(TypedDict):
+    type: Literal["actions"]
+    elements: list[ButtonBlock]
+
+
 class SlackGame:
     """A slack game instance"""
 
@@ -166,6 +190,41 @@ class SlackGame:
                 "text": "Guess",
                 "emoji": True,
             },
+        }
+
+    @property
+    def hint_text(self) -> HintContextBlock:
+        return {
+            "type": "context",
+            "elements": (
+                {
+                    "type": "mrkdwn",
+                    "text": (
+                        f"It's been over {config.hints.threshold} guesses without finding"
+                        " the secret! Want a hint? ChatGPT can give you one!\nIf you"
+                        " request a hint, only you will see it, but everyone will know"
+                        " that you got it!"
+                    ),
+                },
+            ),
+        }
+
+    @property
+    def hint_button(self) -> ButtonsActionBlock:
+        return {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Get hint",
+                        "emoji": True,
+                    },
+                    "value": "hint",
+                    "action_id": "hint",
+                }
+            ],
         }
 
     def markdown_section(self, text) -> MarkdownSectionBlock:
@@ -251,6 +310,25 @@ class SlackGame:
                 },
                 {"type": "mrkdwn", "text": closeness},
                 {"type": "mrkdwn", "text": guess_info},
+            ),
+        }
+
+    def hint_seeker_context(
+        self, hint_seeker: GameUserHintAssociation
+    ) -> HintSeekerContextBlock:
+        return {
+            "type": "context",
+            "block_id": f"hint-seeker-{hint_seeker.user.username}",
+            "elements": (
+                {
+                    "type": "image",
+                    "image_url": hint_seeker.user.profile_photo,
+                    "alt_text": hint_seeker.user.username,
+                },
+                {
+                    "type": "mrkdwn",
+                    "text": f"<@{hint_seeker.user.id}> saw the hint at guess {hint_seeker.guess_idx}",
+                },
             ),
         }
 
@@ -346,5 +424,22 @@ async def get_thread_blocks(game_id: int) -> list:
                 slack_game.input if game.active else None,
             ]
         )
+
+        if config.hints.enabled and len(game.guesses) >= config.hints.threshold:
+            # Time to offer hints!
+            blocks.extend(
+                [
+                    slack_game.markdown_section("*Hints*"),
+                    slack_game.hint_text,
+                    slack_game.hint_button,
+                ]
+            )
+            if game.hint_seekers:
+                blocks.extend(
+                    [
+                        slack_game.hint_seeker_context(hint_seeker)
+                        for hint_seeker in game.hint_seekers
+                    ]
+                )
 
         return [b for b in blocks if b is not None]

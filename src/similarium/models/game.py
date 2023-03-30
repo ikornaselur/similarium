@@ -8,15 +8,17 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import relationship, selectinload
 from sqlalchemy.sql.schema import Index
 
+from similarium.ai import chat_completion_request, get_prompt
 from similarium.config import config
 from similarium.db import Base
 from similarium.exceptions import InvalidWord, NotFound, UserAlreadyWon
 from similarium.logging import logger
+from similarium.models.game_user_hint_association import GameUserHintAssociation
 from similarium.models.game_user_winner_association import GameUserWinnerAssociation
 from similarium.utils import get_secret, get_similarity, timestamp_ms
 
 if TYPE_CHECKING:
-    from similarium.models import Guess
+    from similarium.models import Guess, User
 
 
 class Game(Base):
@@ -34,6 +36,11 @@ class Game(Base):
     guesses = relationship("Guess", back_populates="game", lazy="joined")
     winners = relationship(
         "GameUserWinnerAssociation", order_by="GameUserWinnerAssociation.created"
+    )
+
+    hint = sa.Column(sa.Text, nullable=True)
+    hint_seekers = relationship(
+        "GameUserHintAssociation", order_by="GameUserHintAssociation.created"
     )
 
     similarity_range = relationship(
@@ -83,6 +90,7 @@ class Game(Base):
             .options(selectinload(cls.guesses))
             .options(selectinload(cls.similarity_range))
             .options(selectinload(cls.winners))
+            .options(selectinload(cls.hint_seekers))
         )
 
         result = await session.execute(stmt)
@@ -99,6 +107,7 @@ class Game(Base):
             .options(selectinload(cls.guesses))
             .options(selectinload(cls.similarity_range))
             .options(selectinload(cls.winners))
+            .options(selectinload(cls.hint_seekers))
         )
 
         result = await session.execute(stmt)
@@ -114,13 +123,17 @@ class Game(Base):
                 .options(selectinload(cls.guesses))
                 .options(selectinload(cls.similarity_range))
                 .options(selectinload(cls.winners))
+                .options(selectinload(cls.hint_seekers))
             )
         ).one_or_none()
 
     async def add_guess(
         self, *, word: str, user_id: str, session: AsyncSession
-    ) -> Guess:
-        """Add a guess to the game"""
+    ) -> tuple[Guess, bool]:
+        """Add a guess to the game
+
+        Returns a tuple of the guess and if it's a new guess or an existing one
+        """
         from .guess import Guess
         from .nearby import Nearby
         from .word2vec import Word2Vec
@@ -177,7 +190,7 @@ class Game(Base):
             logger.debug(f"Guess has already been made {guess=}")
             guess.updated = timestamp_ms()  # type: ignore
             guess.latest_guess_user_id = user_id  # type: ignore
-            return guess
+            return (guess, False)
 
         # Create a new guess
         guess = await Guess.new(
@@ -191,7 +204,7 @@ class Game(Base):
         session.add(guess)
         await session.refresh(self)
 
-        return guess
+        return (guess, True)
 
     async def top_guesses(self, n: int, /, *, session: AsyncSession) -> list[Guess]:
         from .guess import Guess
@@ -234,6 +247,11 @@ class Game(Base):
 
     def get_winners_messages(self) -> list[str]:
         winners = []
+        # Get hint seekers map so we can mark if the winner saw the hint
+        hint_seekers = {
+            hint_seeker.user.id: hint_seeker.guess_idx
+            for hint_seeker in self.hint_seekers
+        }
         for idx, winner in enumerate(self.winners):
             match idx:
                 case 0:
@@ -253,10 +271,49 @@ class Game(Base):
                     medal = ""
 
             guess_num = winner.guess_idx - reduction
-            winners.append(
-                f"{medal}<@{winner.user_id}> got the secret on guess {guess_num}!"
-            )
+            message = f"{medal}<@{winner.user_id}> got the secret on guess {guess_num}!"
+            if hint_guess_idx := hint_seekers.get(winner.user_id):
+                message += f" (Hint was used at guess {hint_guess_idx})"
+            winners.append(message)
         return winners
+
+    async def get_hint(
+        self, user: User, close_words_context_count: int = 20, *, session: AsyncSession
+    ) -> str:
+        """Get a hint from ChatGPT for this game secret"""
+
+        # Ensure user is added to hint seekers
+        if user not in [hint_seeker.user for hint_seeker in self.hint_seekers]:
+            self.hint_seekers.append(
+                GameUserHintAssociation(
+                    game_id=self.id, user_id=user.id, guess_idx=len(self.guesses)
+                )
+            )
+            await session.commit()
+
+        if self.hint is not None:
+            return self.hint
+
+        # First get the close words to use for context
+        from .nearby import Nearby
+
+        stmt = select(Nearby).where(
+            Nearby.word == self.secret,
+            Nearby.percentile >= 1000 - close_words_context_count,
+            Nearby.percentile < 1000,
+        )
+        result = await session.execute(stmt)
+
+        close_words = [word.neighbor for word in result.scalars()]
+
+        # Then craft the prompt
+        prompt = get_prompt(self.secret, close_words)
+
+        # And get the hint, commit and return
+        self.hint = await chat_completion_request(prompt)
+        await session.commit()
+
+        return self.hint
 
     def __repr__(self) -> str:
         return (

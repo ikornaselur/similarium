@@ -1,3 +1,4 @@
+from typing import Optional
 from slack_sdk.errors import SlackApiError
 
 from similarium import db
@@ -19,8 +20,9 @@ from similarium.utils import (
 )
 
 
-async def start_game(channel_id: str):
-    puzzle_number = get_puzzle_number()
+async def start_game(channel_id: str, puzzle_number: Optional[int] = None):
+    if puzzle_number is None:
+        puzzle_number = get_puzzle_number()
     puzzle_date = get_puzzle_date(puzzle_number)
 
     game = Game.new(

@@ -62,6 +62,20 @@ class Rules:
 
 
 @dc.dataclass
+class OpenAI:
+    api_key: str
+    api_url: str
+    temperature: float
+
+
+@dc.dataclass
+class Hints:
+    enabled: bool
+    threshold: int
+    openai: OpenAI
+
+
+@dc.dataclass
 class Config:
     files: Files
     database: Database
@@ -69,6 +83,7 @@ class Config:
     slack: Slack
     sentry: Sentry
     rules: Rules
+    hints: Hints
 
 
 def from_dict(klass, d) -> Any:
