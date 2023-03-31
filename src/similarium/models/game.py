@@ -249,7 +249,7 @@ class Game(Base):
         winners = []
         # Get hint seekers map so we can mark if the winner saw the hint
         hint_seekers = {
-            hint_seeker.user_id: hint_seeker.guess_idx
+            hint_seeker.user.id: hint_seeker.guess_idx
             for hint_seeker in self.hint_seekers
         }
         for idx, winner in enumerate(self.winners):
@@ -283,7 +283,7 @@ class Game(Base):
         """Get a hint from ChatGPT for this game secret"""
 
         # Ensure user is added to hint seekers
-        if user.id not in [hint_seeker.user_id for hint_seeker in self.hint_seekers]:
+        if user.id not in [hint_seeker.user.id for hint_seeker in self.hint_seekers]:
             self.hint_seekers.append(
                 GameUserHintAssociation(
                     game_id=self.id, user_id=user.id, guess_idx=len(self.guesses)
