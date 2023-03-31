@@ -249,7 +249,7 @@ class Game(Base):
         winners = []
         # Get hint seekers map so we can mark if the winner saw the hint
         hint_seekers = {
-            hint_seeker.user.id: hint_seeker.guess_idx
+            hint_seeker.user_id: hint_seeker.guess_idx
             for hint_seeker in self.hint_seekers
         }
         for idx, winner in enumerate(self.winners):
