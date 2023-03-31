@@ -270,10 +270,9 @@ class Game(Base):
                     reduction = 1
                     medal = ""
 
-            guess_num = winner.guess_idx - reduction
-            message = f"{medal}<@{winner.user_id}> got the secret on guess {guess_num}!"
+            message = f"{medal}<@{winner.user_id}> got the secret on guess {winner.guess_idx - reduction}!"
             if hint_guess_idx := hint_seekers.get(winner.user_id):
-                message += f" (Hint was used at guess {hint_guess_idx})"
+                message += f" (Hint was used at guess {hint_guess_idx - reduction})"
             winners.append(message)
         return winners
 
