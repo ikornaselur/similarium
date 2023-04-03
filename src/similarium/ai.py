@@ -48,7 +48,6 @@ def get_prompt(secret: str, close_words: list[str]) -> str:
                 f" used close to the secret word in news articles: {joined_words}"
             ),
             f"The secret word is '{secret}'",
-            f"The top closest words to the secret are: {joined_words}",
             "",
             (
                 "Please write a hint (it has to be a sentence) to help find the secret"
