@@ -110,7 +110,7 @@ async def update_game(game: Game) -> None:
         channel=game.channel_id,
         ts=game.thread_ts,
         text="Update to todays game",
-        blocks=await get_thread_blocks(game.id),
+        blocks=await get_thread_blocks(game.id, game.channel_id),
     )
 
 

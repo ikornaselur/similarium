@@ -200,10 +200,10 @@ class SlackGame:
                 {
                     "type": "mrkdwn",
                     "text": (
-                        f"It's been over {config.hints.threshold} guesses without finding"
-                        " the secret! Want a hint? ChatGPT can give you one!\nIf you"
-                        " request a hint, only you will see it, but everyone will know"
-                        " that you got it!"
+                        f"It's been over {config.openai.hints.threshold} guesses without"
+                        " finding the secret! Want a hint? ChatGPT can give you"
+                        " one!\nIf you request a hint, only you will see it, but"
+                        " everyone will know that you got it!"
                     ),
                 },
             ),
@@ -327,7 +327,10 @@ class SlackGame:
                 },
                 {
                     "type": "mrkdwn",
-                    "text": f"<@{hint_seeker.user.id}> saw the hint at guess {hint_seeker.guess_idx}",
+                    "text": (
+                        f"<@{hint_seeker.user.id}> saw the hint at guess"
+                        f" {hint_seeker.guess_idx}"
+                    ),
                 },
             ),
         }
@@ -386,7 +389,7 @@ def _word(guess: Guess) -> str:
     return f"*{guess.word}*"
 
 
-async def get_thread_blocks(game_id: int) -> list:
+async def get_thread_blocks(game_id: int, channel_id: str) -> list:
     async with db.session() as session:
         game = await Game.by_id(game_id, session=session)
         if game is None:
@@ -425,7 +428,10 @@ async def get_thread_blocks(game_id: int) -> list:
             ]
         )
 
-        if config.hints.enabled and len(game.guesses) >= config.hints.threshold:
+        if (
+            channel_id in config.openai.channel_ids
+            and len(game.guesses) >= config.openai.hints.threshold
+        ):
             # Time to offer hints!
             blocks.extend(
                 [

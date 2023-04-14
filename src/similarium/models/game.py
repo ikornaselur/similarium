@@ -1,4 +1,5 @@
 from __future__ import annotations
+import re
 
 from typing import TYPE_CHECKING, Optional
 
@@ -8,7 +9,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import relationship, selectinload
 from sqlalchemy.sql.schema import Index
 
-from similarium.ai import chat_completion_request, get_prompt
+from similarium.ai import chat_completion_request, get_hint_prompt, get_overview_prompt
 from similarium.config import config
 from similarium.db import Base
 from similarium.exceptions import InvalidWord, NotFound, UserAlreadyWon
@@ -270,7 +271,10 @@ class Game(Base):
                     reduction = 1
                     medal = ""
 
-            message = f"{medal}<@{winner.user_id}> got the secret on guess {winner.guess_idx - reduction}!"
+            message = (
+                f"{medal}<@{winner.user_id}> got the secret on guess"
+                f" {winner.guess_idx - reduction}!"
+            )
             if hint_guess_idx := hint_seekers.get(winner.user_id):
                 message += f" (Hint was used at guess {hint_guess_idx - reduction})"
             winners.append(message)
@@ -280,6 +284,9 @@ class Game(Base):
         self, user: User, close_words_context_count: int = 20, *, session: AsyncSession
     ) -> str:
         """Get a hint from ChatGPT for this game secret"""
+
+        if self.channel_id not in config.openai.channel_ids:
+            return "AI features are not enabled on this channel"
 
         # Ensure user is added to hint seekers
         if user.id not in [hint_seeker.user.id for hint_seeker in self.hint_seekers]:
@@ -306,13 +313,59 @@ class Game(Base):
         close_words = [word.neighbor for word in result.scalars()]
 
         # Then craft the prompt
-        prompt = get_prompt(self.secret, close_words)
+        prompt = get_hint_prompt(self.secret, close_words)
 
         # And get the hint, commit and return
         self.hint = await chat_completion_request(prompt)
         await session.commit()
 
         return self.hint
+
+    async def get_overview(self, *, session: AsyncSession) -> Optional[str]:
+        """Get an overview of the game from ChatGPT"""
+        if self.channel_id not in config.openai.channel_ids:
+            return None
+
+        def _get_guess_ctx(guess: Guess) -> str:
+            if guess.percentile == 0:
+                return (
+                    f"<@{guess.user_id}> guessed '{guess.word}', which was far from the secret"
+                )
+            if guess.percentile < 900:
+                return f"<@{guess.user_id}> guessed '{guess.word}' in top 1000 words"
+            if guess.percentile < 990:
+                return f"<@{guess.user_id}> guessed '{guess.word}' in top 100 words"
+            if guess.percentile == 1000:
+                return f"<@{guess.user_id}> guessed the secret '{guess.word}'"
+            return f"<@{guess.user_id}> guessed '{guess.word}' in top 10 words"
+
+        context = []
+
+        # Get win state context
+        context.append("")
+        if winners_ctx := self.get_winners_messages():
+            # Remove any Slack emojis from the string with regex
+            context.extend([re.sub(r":[^:]+:\s*", "", ctx) for ctx in winners_ctx])
+        else:
+            context.append("No one got the secret")
+
+        # Get guesser context
+        context.append("")
+        if top_5 := await self.top_guesses(5, session=session):
+            guess_count = len(self.guesses)
+            context.append(f"There were a total of {guess_count} guesses made")
+            context.append(f"The top {min(5, guess_count)} guesses were:")
+            context.extend([_get_guess_ctx(g) for g in top_5])
+        else:
+            context.append("No one made a guess. I guess no one was playing at all.")
+
+        # Get the prompt
+        context.append("")
+        secret = self.secret
+
+        prompt = get_overview_prompt(secret, context)
+
+        return await chat_completion_request(prompt)
 
     def __repr__(self) -> str:
         return (
