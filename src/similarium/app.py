@@ -47,7 +47,7 @@ sentry_sdk.init(
 
 
 @app.action("hint")
-async def handle_some_action(ack, body, client):
+async def handle_hint_action(ack, body, client):
     await ack()
     with sentry_sdk.start_transaction(op="task", name="Request hint"):
         if (

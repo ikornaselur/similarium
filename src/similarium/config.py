@@ -62,17 +62,17 @@ class Rules:
 
 
 @dc.dataclass
+class Hints:
+    threshold: int
+
+
+@dc.dataclass
 class OpenAI:
     api_key: str
     api_url: str
     temperature: float
-
-
-@dc.dataclass
-class Hints:
-    enabled: bool
-    threshold: int
-    openai: OpenAI
+    channel_ids: list[str]
+    hints: Hints
 
 
 @dc.dataclass
@@ -83,7 +83,7 @@ class Config:
     slack: Slack
     sentry: Sentry
     rules: Rules
-    hints: Hints
+    openai: OpenAI
 
 
 def from_dict(klass, d) -> Any:
