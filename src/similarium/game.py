@@ -1,7 +1,9 @@
 from typing import Optional
+
 from slack_sdk.errors import SlackApiError
 
 from similarium import db
+from similarium.config import config
 from similarium.exceptions import (
     AccountInactive,
     ChannelNotFound,
@@ -123,11 +125,26 @@ async def end_game(channel_id: str) -> None:
         for game in active_games:
             game.active = False  # type: ignore
             await session.commit()
+            token = await get_bot_token_for_team(game.channel.team_id)
 
             await app.client.chat_update(
-                token=await get_bot_token_for_team(game.channel.team_id),
+                token=token,
                 channel=game.channel_id,
                 ts=game.thread_ts,
                 text="Update to todays game",
-                blocks=await get_thread_blocks(game.id),
+                blocks=await get_thread_blocks(game.id, game.channel_id),
+            )
+
+            # If the channel has AI features enabled, post the overview
+            if channel_id not in config.openai.channel_ids:
+                continue
+
+            overview = await game.get_overview(session=session)
+            await app.client.chat_postMessage(
+                token=token,
+                channel=game.channel_id,
+                text="Game overview",
+                blocks=[
+                    {"type": "section", "text": {"type": "mrkdwn", "text": overview}}
+                ],
             )
