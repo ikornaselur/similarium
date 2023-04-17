@@ -21,6 +21,8 @@ from similarium.utils import get_secret, get_similarity, timestamp_ms
 if TYPE_CHECKING:
     from similarium.models import Guess, User
 
+TOP_GUESSES_CTX = 10
+
 
 class Game(Base):
     __tablename__ = "game"
@@ -351,11 +353,19 @@ class Game(Base):
 
         # Get guesser context
         context.append("")
-        if top_5 := await self.top_guesses(5, session=session):
+        if top_guesses := await self.top_guesses(TOP_GUESSES_CTX, session=session):
             guess_count = len(self.guesses)
             context.append(f"There were a total of {guess_count} guesses made")
-            context.append(f"The top {min(5, guess_count)} guesses were:")
-            context.extend([_get_guess_ctx(g) for g in top_5])
+            if guess_count < 50:
+                context.append("That is not a lot of guesses needed")
+            elif guess_count < 100:
+                context.append("That is a normal amount of guesses")
+            elif guess_count < 200:
+                context.append("That is starting to be a lot of guesses")
+            else:
+                context.append("That is a lot of guesses overall")
+            context.append(f"The top {min(TOP_GUESSES_CTX, guess_count)} guesses were:")
+            context.extend([_get_guess_ctx(g) for g in top_guesses])
         else:
             context.append("No one made a guess. I guess no one was playing at all.")
 

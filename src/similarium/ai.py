@@ -72,8 +72,9 @@ def get_overview_prompt(secret: str, context: list[str]) -> str:
             (
                 "Reveal the secret and make a witty overview of how the"
                 " game went yesterday. Incorporate the secret word somehow into the"
-                " overview. This overview is just for the players. Do not explain the"
-                " rules of the game. Reply only with the overview and nothing else."
+                " overview. Congratulate the winners. This overview is just for the"
+                " players. Do not explain the rules of the game. Reply only with the"
+                " overview and nothing else."
             ),
         ]
     )
