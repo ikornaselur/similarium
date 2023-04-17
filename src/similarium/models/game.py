@@ -1,6 +1,6 @@
 from __future__ import annotations
-import re
 
+import re
 from typing import TYPE_CHECKING, Optional
 
 import sqlalchemy as sa
@@ -330,9 +330,7 @@ class Game(Base):
 
         def _get_guess_ctx(guess: Guess) -> str:
             if guess.percentile == 0:
-                return (
-                    f"<@{guess.user_id}> guessed '{guess.word}', which was far from the secret"
-                )
+                return f"<@{guess.user_id}> guessed '{guess.word}', which was far from the secret"
             if guess.percentile < 900:
                 return f"<@{guess.user_id}> guessed '{guess.word}' in top 1000 words"
             if guess.percentile < 990:
@@ -340,6 +338,44 @@ class Game(Base):
             if guess.percentile == 1000:
                 return f"<@{guess.user_id}> guessed the secret '{guess.word}'"
             return f"<@{guess.user_id}> guessed '{guess.word}' in top 10 words"
+
+        def _get_non_winner_ctx() -> list[str]:
+            """Go through the guesses and get context for non winners"""
+            winner_user_ids = {winner.user_id for winner in self.winners}
+            top_non_winners: dict[str, Guess] = {}
+            guess: Guess
+
+            # Get best guess of everyone that didn't win, but participated
+            for guess in self.guesses:
+                if guess.user_id in winner_user_ids:
+                    continue
+
+                if (
+                    guess.user_id not in top_non_winners
+                    or guess.percentile > top_non_winners[guess.user_id].percentile
+                ):
+                    top_non_winners[guess.user_id] = guess
+
+            ctx = ["", "The following players made guesses, but didn't find the secret:"]
+            for user_id, guess in top_non_winners.items():
+                if guess.percentile == 0:
+                    ctx.append(
+                        f"Best guess from <@{user_id}> was '{guess.word}' but it didn't reach top 1000"
+                    )
+                elif guess.percentile < 900:
+                    ctx.append(
+                        f"Best guess from <@{user_id}> was '{guess.word}' in top 1000 words"
+                    )
+                elif guess.percentile < 990:
+                    ctx.append(
+                        f"Best guess from <@{user_id}> was '{guess.word}' in top 100 words"
+                    )
+                else:
+                    ctx.append(
+                        f"Best guess from <@{user_id}> was '{guess.word}' in top 10 words"
+                    )
+
+            return ctx
 
         context = []
 
@@ -350,6 +386,9 @@ class Game(Base):
             context.extend([re.sub(r":[^:]+:\s*", "", ctx) for ctx in winners_ctx])
         else:
             context.append("No one got the secret")
+
+        # Get non winner context
+        context.extend(_get_non_winner_ctx())
 
         # Get guesser context
         context.append("")
