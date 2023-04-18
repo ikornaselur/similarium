@@ -1,7 +1,30 @@
+import re
+
 import aiohttp
 
 from similarium.config import config
 from similarium.logging import logger
+
+NON_BRACKET_USER_ID_REGEX = r"(?<!<)(?P<user_id>@[A-Z0-9]+)(?!>)"
+
+
+def _fix_openai_response(content: str) -> str:
+    """Fix common issues with the response form OpenAI
+
+    These issues include:
+        * Extra quotes around the response
+        * Slack user tags are incorrect
+    """
+    # Remove extra quotes around the content
+    if content[0] == content[-1] == '"':
+        content = content[1:-1]
+
+    # Format the slack user tags correctly
+    # If the tag is in the form @ABCD1234 it needs to be in the form <@ABCD1234>
+    # Use regex to find and replace the tags
+    content = re.sub(NON_BRACKET_USER_ID_REGEX, r"<\1>", content)
+
+    return content
 
 
 async def chat_completion_request(prompt: str) -> str:
@@ -31,10 +54,7 @@ async def chat_completion_request(prompt: str) -> str:
     logger.debug(f"OpenAI API response: {response=}")
     content = response["choices"][0]["message"]["content"]
 
-    if content[0] == content[-1] == '"':
-        content = content[1:-1]
-
-    return content
+    return _fix_openai_response(content)
 
 
 def get_hint_prompt(secret: str, close_words: list[str]) -> str:
