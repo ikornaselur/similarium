@@ -330,7 +330,10 @@ class Game(Base):
 
         def _get_guess_ctx(guess: Guess) -> str:
             if guess.percentile == 0:
-                return f"<@{guess.user_id}> guessed '{guess.word}', which was far from the secret"
+                return (
+                    f"<@{guess.user_id}> guessed '{guess.word}', which was far from the"
+                    " secret"
+                )
             if guess.percentile < 900:
                 return f"<@{guess.user_id}> guessed '{guess.word}' in top 1000 words"
             if guess.percentile < 990:
@@ -356,23 +359,30 @@ class Game(Base):
                 ):
                     top_non_winners[guess.user_id] = guess
 
-            ctx = ["", "The following players made guesses, but didn't find the secret:"]
+            ctx = [
+                "",
+                "The following players made guesses, but didn't find the secret:",
+            ]
             for user_id, guess in top_non_winners.items():
                 if guess.percentile == 0:
                     ctx.append(
-                        f"Best guess from <@{user_id}> was '{guess.word}' but it didn't reach top 1000"
+                        f"Best guess from <@{user_id}> was '{guess.word}' but it didn't"
+                        " reach top 1000"
                     )
                 elif guess.percentile < 900:
                     ctx.append(
-                        f"Best guess from <@{user_id}> was '{guess.word}' in top 1000 words"
+                        f"Best guess from <@{user_id}> was '{guess.word}' in top 1000"
+                        " words"
                     )
                 elif guess.percentile < 990:
                     ctx.append(
-                        f"Best guess from <@{user_id}> was '{guess.word}' in top 100 words"
+                        f"Best guess from <@{user_id}> was '{guess.word}' in top 100"
+                        " words"
                     )
                 else:
                     ctx.append(
-                        f"Best guess from <@{user_id}> was '{guess.word}' in top 10 words"
+                        f"Best guess from <@{user_id}> was '{guess.word}' in top 10"
+                        " words"
                     )
 
             return ctx

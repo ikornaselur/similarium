@@ -200,9 +200,9 @@ class SlackGame:
                 {
                     "type": "mrkdwn",
                     "text": (
-                        f"It's been over {config.openai.hints.threshold} guesses without"
-                        " finding the secret! Want a hint? ChatGPT can give you"
-                        " one!\nIf you request a hint, only you will see it, but"
+                        f"It's been over {config.openai.hints.threshold} guesses"
+                        " without finding the secret! Want a hint? ChatGPT can give"
+                        " you one!\nIf you request a hint, only you will see it, but"
                         " everyone will know that you got it!"
                     ),
                 },
