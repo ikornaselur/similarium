@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "similarium"
-version = "1.7.3"
+version = "1.8.0"
 description = "A Slack bot to play Similarium together as a team"
 authors = ["Axel <dev@absalon.is>"]
 license = "GNU GPLv3"
