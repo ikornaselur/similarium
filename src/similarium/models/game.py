@@ -251,10 +251,11 @@ class Game(Base):
     def get_winners_messages(self) -> list[str]:
         winners = []
         # Get hint seekers map so we can mark if the winner saw the hint
-        hint_seekers = {
+        hint_seekers: dict[str, int] = {
             hint_seeker.user.id: hint_seeker.guess_idx
             for hint_seeker in self.hint_seekers
         }
+        winner: GameUserWinnerAssociation
         for idx, winner in enumerate(self.winners):
             match idx:
                 case 0:
@@ -277,7 +278,9 @@ class Game(Base):
                 f"{medal}<@{winner.user_id}> got the secret on guess"
                 f" {winner.guess_idx - reduction}!"
             )
-            if hint_guess_idx := hint_seekers.get(winner.user_id):
+            if (
+                hint_guess_idx := hint_seekers.get(winner.user_id)
+            ) and hint_guess_idx < winner.guess_idx:
                 message += f" (Hint was used at guess {hint_guess_idx - reduction})"
             winners.append(message)
         return winners
