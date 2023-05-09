@@ -362,6 +362,9 @@ class Game(Base):
                 ):
                     top_non_winners[guess.user_id] = guess
 
+            if not top_non_winners:
+                return []
+
             ctx = [
                 "",
                 "The following players made guesses, but didn't find the secret:",
@@ -393,15 +396,17 @@ class Game(Base):
         context = []
 
         # Get win state context
-        context.append("")
-        if winners_ctx := self.get_winners_messages():
-            # Remove any Slack emojis from the string with regex
-            context.extend([re.sub(r":[^:]+:\s*", "", ctx) for ctx in winners_ctx])
-        else:
-            context.append("No one got the secret")
+        if self.guesses:
+            context.append("")
+            if winners_ctx := self.get_winners_messages():
+                # Remove any Slack emojis from the string with regex
+                context.extend([re.sub(r":[^:]+:\s*", "", ctx) for ctx in winners_ctx])
+                context.append("Congratulate the winners by referencing them directly.")
+            else:
+                context.append("No one got the secret")
 
-        # Get non winner context
-        context.extend(_get_non_winner_ctx())
+            # Get non winner context
+            context.extend(_get_non_winner_ctx())
 
         # Get guesser context
         context.append("")
@@ -426,6 +431,8 @@ class Game(Base):
         secret = self.secret
 
         prompt = get_overview_prompt(secret, context)
+
+        logger.debug(f"Prompt for overview:\n\n{prompt}")
 
         return await chat_completion_request(prompt)
 

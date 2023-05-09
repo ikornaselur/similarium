@@ -12,7 +12,6 @@ NON_BRACKET_USER_ID_REGEX = r"(?:<)?(?:@)?(U[A-Z0-9]{7,})(?:>)?"
 PROMPT_THEMES = (
     "witty and funny",
     "in the form of a story by Dr. Seuss",
-    "overly excited with a lot of emojis",
     "an overview of the game followed by a haiku",
     "in the form of a limerick",
     "in the form of a poem",
@@ -110,9 +109,8 @@ def get_overview_prompt(secret: str, context: list[str]) -> str:
             (
                 "Reveal the secret and make an overview of how the game went"
                 " yesterday. Incorporate the secret word somehow into the overview."
-                " Congratulate the winners by referencing them directly. This overview"
-                " is just for the players. Do not explain the rules of the game. Reply"
-                " only with the overview and nothing else."
+                " This overview is just for the players. Do not explain the rules of"
+                " the game. Reply only with the overview and nothing else."
             ),
             prompt_theme,
         ]
