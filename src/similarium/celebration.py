@@ -158,19 +158,19 @@ celebration_messages_top_10_first_guess = [
 celebration_messages_top_1000_first_guess = [
     (
         "Holy smokes! The very first guess of `{word}` and it's green! "
-        "<@{user_id}>, you're a natural! <celebrate_emoji>"
+        "<@{user_id}>, you're a natural! {celebrate_emoji}"
     ),
     (
         "Stop the presses! The first guess from <@{user_id}> with `{word}` just landed"
-        " in the top 1000! This is going to be epic! <celebrate_emoji>"
+        " in the top 1000! This is going to be epic! {celebrate_emoji}"
     ),
     (
         "Unbelievable! The first guess from <@{user_id}> of `{word}` is a green one! "
-        "We must be playing with a team of mind readers! <celebrate_emoji>"
+        "We must be playing with a team of mind readers! {celebrate_emoji}"
     ),
     (
         "No way! The very first guess from <@{user_id}> of `{word}` and it's already in"
-        " the top 1000! Our team is on fire! <celebrate_emoji>"
+        " the top 1000! Our team is on fire! {celebrate_emoji}"
     ),
 ]
 
