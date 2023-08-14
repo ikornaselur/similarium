@@ -1564,17 +1564,17 @@ files = [
 
 [[package]]
 name = "slack-bolt"
-version = "1.17.0"
+version = "1.18.0"
 description = "The Bolt Framework for Python"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "slack_bolt-1.17.0-py2.py3-none-any.whl", hash = "sha256:ca051f7c62346ecea4b363379de9357844b4f6c8b0c9d0784664d2543d47d42a"},
-    {file = "slack_bolt-1.17.0.tar.gz", hash = "sha256:93b819955337e5ceaaa6871a06ef5f816b6376abc16a3080c0e7240487bc3bcb"},
+    {file = "slack_bolt-1.18.0-py2.py3-none-any.whl", hash = "sha256:63089a401ae3900c37698890249acd008a4651d06e86194edc7b72a00819bbac"},
+    {file = "slack_bolt-1.18.0.tar.gz", hash = "sha256:43b121acf78440303ce5129e53be36bdfe5d926a193daef7daf2860688e65dd3"},
 ]
 
 [package.dependencies]
-slack-sdk = ">=3.20.2,<4"
+slack-sdk = ">=3.21.2,<4"
 
 [package.extras]
 adapter = ["CherryPy (>=18,<19)", "Django (>=3,<5)", "Flask (>=1,<3)", "Werkzeug (>=2,<3)", "boto3 (<=2)", "bottle (>=0.12,<1)", "chalice (>=1.28,<2)", "falcon (>=2,<4)", "fastapi (>=0.70.0,<1)", "gunicorn (>=20,<21)", "pyramid (>=1,<3)", "sanic (>=22,<23)", "starlette (>=0.14,<1)", "tornado (>=6,<7)", "uvicorn (<1)", "websocket-client (>=1.2.3,<2)"]
@@ -1951,4 +1951,4 @@ sqlite = ["aiosqlite"]
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "2e57b1d7ff97c4f64c7df678e1bc61c8c5dbd8887ad3aac7e36a84a7c2df2236"
+content-hash = "70703ff81984f81144b477b9f6df8a1eb7b007ca78874381f7abcad738615bcd"
