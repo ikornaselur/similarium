@@ -27,7 +27,7 @@ uvloop = "^0.17.0"
 [tool.poetry.dev-dependencies]
 isort = "^5.10.1"
 black = "^23.7.0"
-pyright = "^1.1.237"
+pyright = "^1.1.324"
 ipdb = "^0.13.9"
 pdbpp = "^0.10.3"
 pytest = "^7.4.0"
